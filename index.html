@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f172a">
+  <title>导考随身刷 · 手机版</title>
+  <link rel="manifest" href="manifest.json">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    body {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .wave-bar {
+      animation: soundWave 1.2s ease-in-out infinite alternate;
+    }
+    @keyframes soundWave {
+      0% { height: 20%; }
+      100% { height: 100%; }
+    }
+    .tap-active:active {
+      transform: scale(0.97);
+    }
+    /* 彻底屏蔽 Netlify 自动注入的右下角广告徽标 */
+    #nl-badge-frame,
+    #nl-hud-frame,
+    iframe[id^="nl-"],
+    iframe[title="Powered by Netlify"],
+    iframe[title="Netlify"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      clip-path: circle(0) !important;
+    }
+  </style>
+  <script>
+    // 强力屏蔽：实时检测并物理移除任何 Netlify 注入的广告徽标
+    (function() {
+      function killBadges() {
+        const frames = document.querySelectorAll('iframe[id^="nl-"], iframe[title*="Netlify"], #nl-badge-frame, #nl-hud-frame');
+        frames.forEach(f => {
+          if (f.tagName === 'IFRAME') f.remove();
+        });
+      }
+      if (window.MutationObserver) {
+        new MutationObserver(killBadges).observe(document.documentElement, { childList: true, subtree: true });
+      }
+      window.addEventListener('DOMContentLoaded', killBadges);
+      window.addEventListener('load', killBadges);
+    })();
+  </script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-blue-500 selection:text-white">
+  <!-- 预置占位元素：精准触发 Netlify 注入脚本的原生早期退出防护机制，直接阻断 HUD 徽标生成 -->
+  <div id="nl-badge-frame" style="display:none!important;" aria-hidden="true"></div>
+  <div id="nl-hud-frame" style="display:none!important;" aria-hidden="true"></div>
+
+<div id="app" class="flex-1 flex flex-col max-w-md mx-auto w-full relative pb-20">
+  
+  <!-- 顶部导航栏 -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-2">
+      <span class="text-xl">🧭</span>
+      <div>
+        <h1 class="text-sm font-bold text-white leading-tight flex items-center space-x-1.5">
+          <span>全国导游证 · 随身刷</span>
+          <span class="px-1.5 py-0.2 bg-amber-950 text-amber-300 border border-amber-800 rounded text-[9px] font-mono font-bold">冲刺版 (1023题)</span>
+        </h1>
+        <div class="flex items-center space-x-1 text-[10px] text-slate-400">
+          <span>2026北京考区 · 11/21笔试冲刺</span>
+          <span v-if="syncKey" class="text-emerald-400 flex items-center space-x-0.5">
+            <span>●</span>
+            <span class="font-mono">已连云端: {{ syncKey }}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="flex items-center space-x-1.5">
+      <!-- 跨端同步按钮 -->
+      <button @click="showSyncModal = true" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full text-xs flex items-center space-x-1 tap-active" :class="syncKey ? 'text-emerald-400 border-emerald-800/80' : 'text-slate-300'">
+        <span>🔄</span>
+        <span>同步</span>
+      </button>
+
+      <!-- 章节筛选按钮 -->
+      <button @click="showChapterModal = true" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full text-xs text-blue-400 flex items-center space-x-1 tap-active max-w-[120px] truncate">
+        <span class="truncate">{{ currentChapterFilter === 'ALL' ? '全部章节' : currentChapterFilter }}</span>
+        <svg class="w-3 h-3 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- 顶部做题进度条 -->
+  <div class="w-full bg-slate-800 h-1">
+    <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-1 transition-all duration-300" :style="{ width: progressPercent + '%' }"></div>
+  </div>
+
+  <!-- 主模式切换 Tab (文字做题 vs 耳机听题) -->
+  <div class="px-4 pt-3 pb-1">
+    <div class="grid grid-cols-2 p-1 bg-slate-800/80 rounded-xl border border-slate-700/60">
+      <button 
+        @click="switchMainMode('text')" 
+        class="py-2.5 text-xs font-semibold rounded-lg flex items-center justify-center space-x-1.5 transition-all tap-active"
+        :class="activeMode === 'text' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        <span>📝 文字刷题模式</span>
+      </button>
+      <button 
+        @click="switchMainMode('audio')" 
+        class="py-2.5 text-xs font-semibold rounded-lg flex items-center justify-center space-x-1.5 transition-all tap-active"
+        :class="activeMode === 'audio' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+        <span>🎧 耳机听题模式</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 刷题类型栏 (全库顺序 vs 错题重刷) -->
+  <div class="px-4 py-1.5 flex items-center justify-between text-xs">
+    <div class="flex space-x-1">
+      <button 
+        @click="setPracticeMode('all')"
+        class="px-2.5 py-1 rounded-lg text-[11px] transition-all"
+        :class="practiceMode === 'all' ? 'bg-slate-700 text-white font-bold' : 'text-slate-400'">
+        全部题 ({{ allQuestions.length }})
+      </button>
+      <button 
+        @click="setPracticeMode('wrong')"
+        class="px-2.5 py-1 rounded-lg text-[11px] transition-all flex items-center space-x-1"
+        :class="practiceMode === 'wrong' ? 'bg-amber-600 text-white font-bold shadow-md' : 'text-slate-400 hover:text-amber-300'">
+        <span>🎯 只刷错题 ({{ wrongBook.filter(w=>!w.fixed).length }})</span>
+      </button>
+      <button 
+        @click="showWrongModal = true"
+        class="px-2 py-1 rounded-lg text-[11px] text-amber-300 bg-amber-950/60 border border-amber-800/60 hover:bg-amber-900/60 transition-all tap-active flex items-center space-x-0.5">
+        <span>📕 错题账本</span>
+      </button>
+    </div>
+
+    <div class="flex items-center space-x-1.5 text-[11px] text-slate-400 font-mono">
+      <span><span class="text-white font-bold">{{ currentIndex + 1 }}</span> / {{ filteredQuestions.length }}</span>
+      <button v-if="currentIndex > 0" @click="resetToFirstQuestion" class="text-[10px] text-blue-400/80 hover:text-blue-300 underline tap-active">
+        重置
+      </button>
+    </div>
+  </div>
+
+  <!-- 错题专攻提示条 -->
+  <div v-if="practiceMode === 'wrong'" class="mx-4 mb-1 px-3 py-1.5 bg-amber-950/60 border border-amber-800/60 rounded-xl flex items-center justify-between text-[11px] text-amber-300">
+    <span class="flex items-center space-x-1">
+      <span>🔥</span>
+      <span><b>全真错题盲测中</b>：原题重做，选对即刻攻克！</span>
+    </span>
+    <button @click="setPracticeMode('all')" class="text-[10px] text-slate-400 hover:text-white underline">
+      退出错题
+    </button>
+  </div>
+
+  <!-- 内容区 -->
+  <main class="flex-1 px-4 py-2 flex flex-col">
+
+    <!-- 题目标签信息 -->
+    <div class="flex items-center space-x-2 text-xs mb-2 flex-wrap gap-y-1">
+      <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800/60 font-medium">
+        {{ currentQuestion.type }}题
+      </span>
+      <span v-if="currentQuestion.tag" class="px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60 text-[10px] font-medium">
+        🎯 {{ currentQuestion.tag }}
+      </span>
+      <span class="text-slate-400 text-[11px] truncate">
+        {{ currentQuestion.chapter }}
+      </span>
+    </div>
+
+    <!-- 题干卡片 -->
+    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-lg mb-3">
+      <p class="text-base text-slate-100 font-medium leading-relaxed">
+        {{ currentQuestion.question }}
+      </p>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- 模式 1: 文字做题模式视图 -->
+    <!-- ============================================== -->
+    <div v-if="activeMode === 'text'" class="flex-1 flex flex-col">
+      
+      <!-- 简答/面试问答题专属视图 -->
+      <div v-if="currentQuestion.type === '简答' || currentQuestion.type === '问答'" class="mb-3 space-y-3">
+        <div class="p-4 bg-slate-800/60 border border-dashed border-slate-700 rounded-xl text-center text-xs text-slate-300 space-y-1">
+          <div class="font-bold text-amber-400 text-sm">🗣️ 北京现场口试 · 综合能力考查</div>
+          <div class="text-[11px] text-slate-400">请先在心中默述或大声口答，随后点击下方按钮对答案</div>
+        </div>
+        <button 
+          v-if="!hasAnswered"
+          @click="submitAnswer"
+          class="w-full py-3.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 rounded-xl font-bold text-xs text-white shadow-lg tap-active flex items-center justify-center space-x-1.5">
+          <span>👀</span>
+          <span>口答完毕，揭晓考官标准参考答语</span>
+        </button>
+      </div>
+
+      <!-- 客观题选项列表 (单选 / 多选 / 判断) -->
+      <div v-else class="space-y-2 mb-3">
+        <button 
+          v-for="opt in currentQuestion.options" 
+          :key="opt.key"
+          @click="handleOptionClick(opt.key)"
+          :disabled="hasAnswered"
+          class="w-full text-left p-3.5 rounded-xl border transition-all flex items-start space-x-3 tap-active"
+          :class="[
+            !hasAnswered ? (selectedKeys.includes(opt.key) ? 'bg-blue-900/60 border-blue-400 text-white' : 'bg-slate-800/80 hover:bg-slate-700/80 border-slate-700 text-slate-200') : '',
+            hasAnswered && currentQuestion.answer.includes(opt.key) ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200' : '',
+            hasAnswered && selectedKeys.includes(opt.key) && !currentQuestion.answer.includes(opt.key) ? 'bg-rose-950/70 border-rose-500 text-rose-200' : '',
+            hasAnswered && !selectedKeys.includes(opt.key) && !currentQuestion.answer.includes(opt.key) ? 'opacity-50 border-slate-800 bg-slate-800/30' : ''
+          ]">
+          
+          <div 
+            class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 border"
+            :class="[
+              !hasAnswered ? (selectedKeys.includes(opt.key) ? 'bg-blue-500 text-white border-blue-400' : 'bg-slate-700/50 text-slate-300 border-slate-600') : '',
+              hasAnswered && currentQuestion.answer.includes(opt.key) ? 'bg-emerald-500 text-slate-950 font-black border-emerald-400' : '',
+              hasAnswered && selectedKeys.includes(opt.key) && !currentQuestion.answer.includes(opt.key) ? 'bg-rose-500 text-white font-black border-rose-400' : ''
+            ]">
+            {{ opt.key }}
+          </div>
+          
+          <div class="flex-1 text-sm font-normal leading-normal">
+            {{ opt.text }}
+          </div>
+
+          <div v-if="hasAnswered && currentQuestion.answer.includes(opt.key)" class="text-emerald-400 shrink-0 font-bold">
+            ✓
+          </div>
+          <div v-else-if="hasAnswered && selectedKeys.includes(opt.key) && !currentQuestion.answer.includes(opt.key)" class="text-rose-400 shrink-0 font-bold">
+            ✕
+          </div>
+        </button>
+      </div>
+
+      <!-- 多选题专属提交按钮 -->
+      <div v-if="currentQuestion.type === '多选' && !hasAnswered" class="mb-3">
+        <button 
+          @click="submitAnswer"
+          :disabled="!selectedKeys.length"
+          class="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 rounded-xl font-bold text-xs text-white shadow-lg tap-active">
+          确认提交选择 (已选 {{ selectedKeys.join('') || '无' }})
+        </button>
+      </div>
+
+      <!-- 判分结果与解析卡片 (硬封印：答完才显示) -->
+      <div v-if="hasAnswered" class="bg-slate-800/90 border border-slate-700 rounded-xl p-3.5 mb-3 transition-all animate-fade-in">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center space-x-2">
+            <span v-if="currentQuestion.type === '简答' || currentQuestion.type === '问答'" class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-800">
+              🗣️ 考官参考答语
+            </span>
+            <span v-else-if="isCorrect" class="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">
+              🎉 回答正确
+            </span>
+            <span v-else class="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-950 text-rose-400 border border-rose-800">
+              ❌ 回答错误
+            </span>
+            
+            <span v-if="currentQuestion.type !== '简答' && currentQuestion.type !== '问答'" class="text-xs text-slate-300">
+              正确答案：<strong class="text-emerald-400 font-mono text-sm">{{ currentQuestion.answer === '√' ? '正确' : (currentQuestion.answer === '×' ? '错误' : currentQuestion.answer) }}</strong>
+            </span>
+          </div>
+
+          <button @click="toggleManualWrong" class="text-xs flex items-center space-x-1" :class="currentWrongRecord ? 'text-amber-400' : 'text-slate-400'">
+            <span>{{ currentWrongRecord ? '★ 错题中' : '☆ 收藏错题' }}</span>
+          </button>
+        </div>
+        
+        <div v-if="currentQuestion.type === '简答' || currentQuestion.type === '问答'" class="text-xs text-emerald-300 font-medium mb-1.5 p-2 bg-emerald-950/40 rounded border border-emerald-800/50">
+          【考官标准答语】{{ currentQuestion.answer }}
+        </div>
+
+        <p class="text-xs text-slate-300 leading-relaxed bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+          {{ currentQuestion.analysis }}
+        </p>
+
+        <!-- 口试自评反馈按钮 -->
+        <div v-if="currentQuestion.type === '问答' || currentQuestion.type === '简答'" class="mt-2.5 pt-2 border-t border-slate-700/60 flex space-x-2">
+          <button 
+            @click="markOralResult(true)" 
+            class="flex-1 py-2 bg-emerald-700/80 hover:bg-emerald-600 rounded-lg text-xs font-bold text-white flex items-center justify-center space-x-1 tap-active">
+            <span>✅ 我答对了 (已掌握)</span>
+          </button>
+          <button 
+            @click="markOralResult(false)" 
+            class="flex-1 py-2 bg-rose-800/80 hover:bg-rose-700 rounded-lg text-xs font-bold text-white flex items-center justify-center space-x-1 tap-active">
+            <span>❌ 没答上来 (记入错题)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 底部控制按钮 -->
+      <div class="mt-auto pt-2 grid grid-cols-3 gap-2">
+        <button 
+          @click="prevQuestion" 
+          :disabled="currentIndex === 0"
+          class="py-3 px-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-xl text-xs font-medium text-slate-200 border border-slate-700 tap-active">
+          ← 上一题
+        </button>
+        <button 
+          @click="randomNextQuestion" 
+          class="py-3 px-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-medium text-blue-400 border border-slate-700 tap-active">
+          🎲 随机出题
+        </button>
+        <button 
+          v-if="currentIndex < filteredQuestions.length - 1"
+          @click="nextQuestion" 
+          class="py-3 px-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-semibold text-white shadow-md tap-active">
+          下一题 →
+        </button>
+        <button 
+          v-else
+          @click="showFinishedModal = true" 
+          class="py-3 px-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-semibold text-white shadow-md tap-active animate-pulse">
+          🎉 查看战报/重刷
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- 模式 2: 耳机听题模式视图 (专为通勤设计) -->
+    <!-- ============================================== -->
+    <div v-else class="flex-1 flex flex-col justify-between">
+      
+      <div class="bg-gradient-to-b from-indigo-950/60 to-slate-800/70 border border-indigo-900/50 rounded-2xl p-5 text-center relative overflow-hidden shadow-xl mb-3">
+        
+        <div v-if="audioPlaying" class="flex items-center justify-center space-x-1.5 h-12 mb-2">
+          <div v-for="n in 9" :key="n" class="w-1.5 bg-indigo-500 rounded-full wave-bar" :style="{ animationDelay: (n * 0.15) + 's', height: (20 + (n % 4) * 20) + '%' }"></div>
+        </div>
+        <div v-else class="h-12 flex items-center justify-center text-slate-500 mb-2">
+          <svg class="w-8 h-8 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+        </div>
+
+        <div class="text-sm font-semibold mb-1" :class="audioStatusColor">
+          {{ audioStatusText }}
+        </div>
+
+        <div v-if="audioState === 'thinking'" class="text-3xl font-mono font-black text-amber-400 my-2 animate-pulse">
+          {{ thinkCountdown }}s
+        </div>
+
+        <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+          读完题后自动停顿 {{ thinkDuration }} 秒思考，随后自动播报答案，戴着耳机无需碰手机。
+        </p>
+
+        <div v-if="audioState === 'reading_answer' || audioState === 'answered'" class="mt-3 p-3 bg-slate-900/80 rounded-xl border border-indigo-800/60 text-left">
+          <div class="text-xs text-emerald-400 font-bold mb-1">
+            ✓ 正确答案：{{ currentQuestion.answer === '√' ? '正确' : (currentQuestion.answer === '×' ? '错误' : currentQuestion.answer) }}
+          </div>
+          <p class="text-[11px] text-slate-300 leading-snug">
+            {{ currentQuestion.analysis }}
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-3.5 space-y-3 mb-3">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400">朗读语速</span>
+          <div class="flex space-x-1.5 bg-slate-900/80 p-1 rounded-lg border border-slate-700/60">
+            <button 
+              v-for="rate in [0.9, 1.0, 1.2, 1.5]" 
+              :key="rate"
+              @click="setSpeechRate(rate)"
+              class="px-2.5 py-1 rounded text-[11px] font-mono transition-all"
+              :class="speechRate === rate ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'">
+              {{ rate }}x
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400">思考停顿</span>
+          <div class="flex space-x-1.5 bg-slate-900/80 p-1 rounded-lg border border-slate-700/60">
+            <button 
+              v-for="sec in [3, 5, 8]" 
+              :key="sec"
+              @click="thinkDuration = sec"
+              class="px-3 py-1 rounded text-[11px] font-mono transition-all"
+              :class="thinkDuration === sec ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'">
+              {{ sec }}秒
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <button 
+          @click="toggleAudioPlay" 
+          class="w-full py-4 rounded-2xl font-bold text-sm shadow-xl flex items-center justify-center space-x-2 transition-all tap-active"
+          :class="audioPlaying ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/40' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-indigo-900/50'">
+          <svg v-if="!audioPlaying" class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+          <svg v-else class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>
+          <span>{{ audioPlaying ? '暂停听题' : '开始戴耳机听题' }}</span>
+        </button>
+
+        <button 
+          @click="fastForwardAudio" 
+          v-if="audioPlaying"
+          class="w-full py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-xs text-indigo-300 font-medium tap-active">
+          ⚡ 提前揭晓答案 / 直接跳下一题
+        </button>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- 底部固定栏 -->
+  <footer class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 px-4 py-2.5 flex items-center justify-between text-xs z-30" style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));">
+    <div class="flex items-center space-x-3 text-slate-400">
+      <div>已练 <strong class="text-white">{{ stats.totalPracticed }}</strong> 题</div>
+      <div>正确率 <strong class="text-emerald-400">{{ stats.accuracy }}%</strong></div>
+    </div>
+    
+    <div class="flex items-center space-x-2">
+      <button @click="showSyncModal = true" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs tap-active flex items-center space-x-1" :class="syncKey ? 'text-emerald-400' : 'text-slate-300'">
+        <span>🔄</span>
+        <span>同步</span>
+      </button>
+
+      <button @click="showWrongModal = true" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 flex items-center space-x-1.5 tap-active">
+        <span>📕 错题本</span>
+        <span class="px-1.5 py-0.2 bg-amber-950 text-amber-300 border border-amber-800/80 rounded-full text-[10px] font-mono">
+          {{ wrongBook.filter(w=>!w.fixed).length }}
+        </span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- 弹窗 1: 章节选择 -->
+  <div v-if="showChapterModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end justify-center p-0" @click.self="showChapterModal = false">
+    <div class="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-5 w-full max-w-md space-y-3">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-sm font-bold text-white">选择章节</h3>
+        <button @click="showChapterModal = false" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+      <div class="space-y-2 max-h-[60vh] overflow-y-auto">
+        <button 
+          @click="setChapterFilter('ALL')"
+          class="w-full text-left p-3.5 rounded-xl border flex items-center justify-between text-xs font-medium transition-all tap-active"
+          :class="currentChapterFilter === 'ALL' ? 'bg-blue-600/20 border-blue-500 text-blue-300' : 'bg-slate-800/60 border-slate-700/60 text-slate-300'">
+          <span>全部科目 (全真模拟合卷)</span>
+          <span class="text-slate-500 font-mono text-[11px]">{{ allQuestions.length }} 题</span>
+        </button>
+
+        <button 
+          v-for="chap in chapterList" 
+          :key="chap"
+          @click="setChapterFilter(chap)"
+          class="w-full text-left p-3.5 rounded-xl border flex items-center justify-between text-xs font-medium transition-all tap-active"
+          :class="currentChapterFilter === chap ? 'bg-blue-600/20 border-blue-500 text-blue-300' : 'bg-slate-800/60 border-slate-700/60 text-slate-300'">
+          <span class="truncate">{{ chap }}</span>
+          <span class="text-slate-500 font-mono text-[11px] ml-2 shrink-0">{{ getChapterCount(chap) }} 题</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗 2: 错题本 -->
+  <div v-if="showWrongModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex flex-col justify-end p-0" @click.self="showWrongModal = false">
+    <div class="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-5 w-full max-w-md max-h-[80vh] flex flex-col space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-white">错题账本 ({{ wrongBook.filter(w=>!w.fixed).length }} 题未攻克)</h3>
+          <p class="text-[11px] text-slate-400">攻克后的错题会自动标记，支持导出备份</p>
+        </div>
+        <button @click="showWrongModal = false" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <div v-if="wrongBook.length === 0" class="py-12 text-center text-slate-500 text-xs">
+        🎉 暂无错题记录，继续保持！
+      </div>
+
+      <!-- 一键开启全真错题盲测 -->
+      <button 
+        v-if="wrongBook.filter(w=>!w.fixed).length > 0"
+        @click="startWrongPracticeFromModal" 
+        class="w-full py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center space-x-1.5 tap-active">
+        <span>🎯</span>
+        <span>开启错题盲测（原题封印答案 · 像新题一样逐道重做）</span>
+      </button>
+
+      <div v-else-if="wrongBook.length > 0" class="flex-1 overflow-y-auto space-y-3 pr-1">
+        <div v-for="item in wrongBook" :key="item.id" class="p-3 bg-slate-800/80 border border-slate-700/70 rounded-xl space-y-2 text-xs">
+          <div class="flex items-center justify-between text-[11px]">
+            <div class="flex items-center space-x-1.5 truncate max-w-[240px]">
+              <span class="text-blue-400">【{{ item.chapter }}】</span>
+              <span v-if="item.tag" class="px-1.5 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60 text-[9px] font-medium">
+                🎯 {{ item.tag }}
+              </span>
+            </div>
+            <span :class="item.fixed ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'">
+              {{ item.fixed ? '✅ 已攻克' : '待攻克' }}
+            </span>
+          </div>
+          
+          <p class="text-slate-100 font-medium leading-relaxed">{{ item.question }}</p>
+
+          <div class="flex items-center justify-between pt-1">
+            <button 
+              @click="practiceSpecificWrong(item)" 
+              class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs flex items-center space-x-1 tap-active shadow">
+              <span>▶</span>
+              <span>重做此题 (原题盲测)</span>
+            </button>
+            <span class="text-[10px] text-slate-400">上次选错: <b class="text-rose-400">{{ item.myAnswer }}</b></span>
+          </div>
+
+          <details class="text-[11px] text-slate-400 bg-slate-900/80 p-2 rounded border border-slate-800">
+            <summary class="cursor-pointer text-slate-400 hover:text-slate-300 font-medium select-none">
+              点击展开答案与依据解析 ▾
+            </summary>
+            <div class="mt-1.5 pt-1.5 border-t border-slate-800">
+              正确答案：<span class="text-emerald-400 font-bold">{{ item.answer }}</span><br>
+              {{ item.analysis }}
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-slate-800 flex space-x-2">
+        <button @click="exportWrongBook" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white tap-active">
+          ⬇ 导出错题备份
+        </button>
+        <button @click="clearAllWrong" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs text-rose-400 border border-slate-700 tap-active">
+          清空
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗 3: 跨端云同步设置面板 (重点功能) -->
+  <div v-if="showSyncModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex flex-col justify-end p-0" @click.self="showSyncModal = false">
+    <div class="bg-slate-900 border-t border-slate-800 rounded-t-3xl p-5 w-full max-w-md max-h-[85vh] overflow-y-auto space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-white flex items-center space-x-1.5">
+            <span>🔄</span>
+            <span>手机与电脑 · 跨端同步中心</span>
+          </h3>
+          <p class="text-[11px] text-slate-400">0元免服务器 · 手机4G在外也能同步</p>
+        </div>
+        <button @click="showSyncModal = false" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <!-- 专属口令配置 -->
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-slate-200">专属同步口令 (Sync Key)</label>
+          <span class="text-[10px] text-indigo-400">{{ syncStatusText }}</span>
+        </div>
+
+        <div class="flex space-x-2">
+          <input 
+            v-model="syncKey" 
+            placeholder="例如: daokao_888" 
+            class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-blue-500">
+          <button @click="generateRandomSyncKey" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs text-slate-300 tap-active">
+            🎲 随机
+          </button>
+          <button @click="saveSyncKey(); doSync(true)" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold text-white tap-active shadow-md">
+            保存
+          </button>
+        </div>
+
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          💡 <strong>使用规则：</strong>手机和电脑填入<strong>同一个口令</strong>，错题本和做题进度就会自动双向合并！朋友打开应用不填你的口令，数据完全相互独立、互不干扰。
+        </p>
+      </div>
+
+      <!-- 立即同步操作按钮 -->
+      <button 
+        @click="doSync(true)"
+        class="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center space-x-1.5 tap-active">
+        <span>🔄</span>
+        <span>立即双向合并同步 (最后同步: {{ lastSyncTime }})</span>
+      </button>
+
+      <!-- 零网络离线微信中转 (极简兜底) -->
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 space-y-3">
+        <h4 class="text-xs font-bold text-slate-200">微信口令直传 (离线零网络中转)</h4>
+        <p class="text-[11px] text-slate-400">
+          也可以直接把做题进度复制成一段代码发给微信文件传输助手，另一端粘贴即可恢复：
+        </p>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button @click="copySyncToken" class="py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs text-blue-300 tap-active font-medium">
+            📋 复制当前同步码
+          </button>
+          <button @click="importSyncToken" :disabled="!importCodeInput" class="py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded-xl text-xs text-white tap-active font-medium">
+            📥 粘贴导入
+          </button>
+        </div>
+
+        <input 
+          v-model="importCodeInput" 
+          placeholder="在此粘贴另一端发来的同步码..." 
+          class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <!-- 手机端强制更新与清空离线缓存 -->
+      <div class="bg-indigo-950/40 border border-indigo-800/60 rounded-2xl p-4 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-white flex items-center space-x-1">
+            <span>⚡</span>
+            <span>手机端强制重载最新版本</span>
+          </span>
+          <span class="text-[10px] text-indigo-300">解决桌面图标不更新</span>
+        </div>
+        <p class="text-[11px] text-slate-400">
+          如果手机桌面图标没有显示最新 1023 题笔试冲刺版，点击下方按钮一键清除手机本地强缓存：
+        </p>
+        <button 
+          @click="forceAppUpdate" 
+          class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white shadow tap-active flex items-center justify-center space-x-1.5">
+          <span>🔄</span>
+          <span>清除离线缓存并强制重载 (拉取最新题库)</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 弹窗 4: 本轮刷题完成战报弹窗 -->
+  <div v-if="showFinishedModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4" @click.self="showFinishedModal = false">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+      <div class="w-16 h-16 bg-gradient-to-tr from-amber-500 to-yellow-400 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-amber-500/30 text-3xl">
+        🏆
+      </div>
+
+      <div>
+        <h3 class="text-lg font-bold text-white">本轮真题全部完成！</h3>
+        <p class="text-xs text-slate-400 mt-1">
+          已完整通关当前科目全部 <span class="text-blue-400 font-bold">{{ filteredQuestions.length }}</span> 道考纲题目
+        </p>
+      </div>
+
+      <!-- 战报卡片 -->
+      <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 grid grid-cols-3 gap-2 text-center">
+        <div>
+          <div class="text-[10px] text-slate-400">已刷题数</div>
+          <div class="text-sm font-bold text-white mt-0.5">{{ filteredQuestions.length }}</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400">总体正确率</div>
+          <div class="text-sm font-bold text-emerald-400 mt-0.5">{{ stats.accuracy }}%</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400">待攻克错题</div>
+          <div class="text-sm font-bold text-rose-400 mt-0.5">{{ wrongBook.filter(w=>!w.fixed).length }} 题</div>
+        </div>
+      </div>
+
+      <!-- 操作按钮群 -->
+      <div class="space-y-2 pt-1">
+        <button 
+          @click="restartPractice" 
+          class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl text-xs font-bold text-white shadow-lg tap-active">
+          🔄 从第 1 题开始再刷一轮 (覆盖记忆)
+        </button>
+
+        <button 
+          v-if="wrongBook.filter(w=>!w.fixed).length > 0"
+          @click="switchAndPracticeWrong" 
+          class="w-full py-3.5 bg-amber-600 hover:bg-amber-500 rounded-xl text-xs font-bold text-white shadow-lg tap-active">
+          🎯 专攻这 {{ wrongBook.filter(w=>!w.fixed).length }} 道错题 (突击消灭)
+        </button>
+
+        <button 
+          @click="showFinishedModal = false" 
+          class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs text-slate-400 tap-active">
+          留在本题检查解析
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="questions.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
