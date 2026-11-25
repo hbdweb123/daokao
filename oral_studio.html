@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>导考口述语音引导 · 北京六处全集 V3</title>
+<style>
+  :root {
+    --bg: #f6f2ea;
+    --panel: #ffffff;
+    --paper: #faf6ee;
+    --ink: #23201c;
+    --muted: #6e675e;
+    --border: #e4ddd0;
+    --blue: #1d4e89;
+    --blue-light: #e8f1fb;
+    --red: #b83227;
+    --red-light: #fdf0ee;
+    --gold: #b8860b;
+    --gold-light: #fdf7e3;
+    --green: #276749;
+    --green-light: #ebf7f0;
+    --shadow: 0 6px 24px rgba(35, 32, 28, 0.06);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* 顶部总控栏 + 景点切换 + 语音引导条 */
+  .sticky-header {
+    flex-shrink: 0;
+    z-index: 60;
+    background: rgba(255, 255, 255, 0.98);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 10px rgba(35, 32, 28, 0.05);
+  }
+
+  .topbar {
+    max-width: 1580px;
+    margin: 0 auto;
+    padding: 6px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .spot-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+  }
+  .spot-tab {
+    border: 1.5px solid #dfd8ca;
+    background: #faf7f2;
+    color: #4a443b;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 11px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .spot-tab:hover { border-color: var(--blue); color: var(--blue); }
+  .spot-tab.active {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(29,78,137,0.22);
+  }
+  .spot-tab .tab-dot {
+    font-size: 10.5px;
+    font-weight: 600;
+    opacity: 0.82;
+  }
+  .spot-tab.all-done:not(.active) {
+    background: var(--green-light);
+    border-color: #9ae6b4;
+    color: var(--green);
+  }
+  .dice-btn {
+    border: 1.5px solid #e8c48d;
+    background: #fff8e7;
+    color: #8a5600;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 5px 11px;
+    border-radius: 9px;
+    cursor: pointer;
+  }
+  .dice-btn:hover { background: #fcecc4; }
+
+  .right-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mode-group {
+    display: flex;
+    background: #f1ece3;
+    padding: 3px;
+    border-radius: 9px;
+    gap: 2px;
+  }
+  .mode-btn {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .mode-btn.active {
+    background: #fff;
+    color: var(--blue);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  }
+  .mode-btn[data-mode="exam"].active { color: var(--red); }
+
+  .timer-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #faf7f2;
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 9px;
+  }
+  .timer-display {
+    font-variant-numeric: tabular-nums;
+    font-size: 15px;
+    font-weight: 700;
+    min-width: 48px;
+    text-align: center;
+  }
+  .timer-display.good { color: var(--green); }
+  .timer-display.warn { color: #c05621; }
+  .timer-display.over { color: var(--red); }
+  .t-btn {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--ink);
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .t-btn:hover { background: #f2ede4; }
+
+  /* 语音引导主控栏 */
+  .guide-bar-wrap {
+    background: linear-gradient(90deg, #163b69 0%, #1d4e89 55%, #235ea3 100%);
+    color: #fff;
+  }
+  .guide-bar {
+    max-width: 1580px;
+    margin: 0 auto;
+    padding: 7px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .play-main-btn {
+    border: none;
+    background: #f3c642;
+    color: #1c1811;
+    font-size: 13.5px;
+    font-weight: 800;
+    padding: 7px 15px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    white-space: nowrap;
+  }
+  .play-main-btn:hover { background: #ffd24d; }
+  .play-main-btn.playing { background: #fff; color: var(--red); }
+
+  .nav-ctrl { display: inline-flex; align-items: center; gap: 5px; }
+  .g-btn {
+    border: 1px solid rgba(255,255,255,0.28);
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 7px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .g-btn:hover { background: rgba(255,255,255,0.24); }
+  .g-btn.active { background: #fff; color: var(--blue); border-color: #fff; }
+
+  .guide-progress-area {
+    flex: 1;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .guide-status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12.5px;
+    color: #e4effc;
+    gap: 10px;
+  }
+  .guide-now-title {
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .guide-time {
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: #cde0f8;
+    white-space: nowrap;
+  }
+  .seek-slider {
+    width: 100%;
+    height: 5px;
+    accent-color: #f3c642;
+    cursor: pointer;
+    margin: 0;
+  }
+  .speed-group { display: inline-flex; align-items: center; gap: 4px; }
+  .auto-next-lbl {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #e4effc;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .auto-next-lbl input { accent-color: #f3c642; margin: 0; }
+
+  /* 主双栏：100vh 全图永不裁剪 + 右侧独立滚 */
+  .workspace {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(380px, 46%) 1fr;
+    gap: 16px;
+    max-width: 1580px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 10px 16px 12px;
+    overflow: hidden;
+  }
+
+  .map-panel {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 8px 12px 10px;
+    overflow: hidden;
+  }
+  .map-toolbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f0ebe1;
+  }
+  .map-hint { font-size: 12px; color: var(--muted); }
+  .map-hint strong { color: var(--blue); }
+  .toggle-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--ink);
+    background: #f5f0e6;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle-pill input { accent-color: var(--red); margin: 0; }
+
+  .svg-wrap {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--paper);
+    border: 1px solid #ebe3d5;
+    padding: 4px;
+  }
+  .svg-wrap svg.spot-map-svg {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: 100%;
+    display: block;
+    user-select: none;
+  }
+
+  @keyframes pulseRing {
+    0%   { stroke-opacity: 1; stroke-width: 4.5; }
+    50%  { stroke-opacity: 0.32; stroke-width: 7.5; }
+    100% { stroke-opacity: 1; stroke-width: 4.5; }
+  }
+  .map-node { cursor: pointer; transition: opacity 0.18s ease; }
+  .map-node:hover { opacity: 0.92; }
+  .map-node .hl-ring { opacity: 0; transition: opacity 0.2s ease; }
+  .map-node.active .hl-ring { opacity: 1; stroke: #e09f00; }
+  body.is-playing .map-node.active .hl-ring {
+    opacity: 1;
+    stroke: #e09f00;
+    animation: pulseRing 1.4s ease-in-out infinite;
+  }
+  .map-node.done .node-num-bg { fill: #276749 !important; }
+  .blind-map .map-label { opacity: 0 !important; transition: opacity 0.2s ease; }
+  .blind-map .map-node:hover .map-label { opacity: 0.18 !important; }
+
+  /* 右侧独立滚动区 */
+  .right-col {
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 6px;
+    padding-bottom: 44px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+  }
+
+  .ticket-box {
+    background: #fffdf8;
+    border: 1.5px solid #d9ccb4;
+    border-left: 5px solid var(--red);
+    border-radius: 14px;
+    padding: 13px 16px;
+    box-shadow: var(--shadow);
+  }
+  .ticket-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 7px;
+  }
+  .ticket-title { font-size: 13.5px; font-weight: 700; color: var(--red); }
+  .progress-pill {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green);
+    background: var(--green-light);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .ticket-text { font-size: 13px; line-height: 1.68; color: #2f2a24; margin: 0 0 9px; }
+  .ticket-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .t-chip {
+    font-size: 12px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    background: #f4efe6;
+    color: #5b5349;
+    border: 1px solid #e4dccd;
+    cursor: pointer;
+  }
+  .t-chip:hover { border-color: var(--blue); color: var(--blue); }
+  .t-chip.active { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
+  .t-chip.done:not(.active) { background: var(--green-light); border-color: #9ae6b4; color: var(--green); }
+  .t-chip.done::before { content: "✓ "; font-weight: 700; }
+
+  .exam-banner {
+    display: none;
+    background: var(--red-light);
+    border: 1px solid #f2c4be;
+    color: #8c231a;
+    border-radius: 12px;
+    padding: 11px 15px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  body.mode-exam .exam-banner { display: block; }
+
+  .formula-bar {
+    background: var(--blue-light);
+    border: 1px solid #c5daf2;
+    border-radius: 12px;
+    padding: 9px 14px;
+    font-size: 12.5px;
+    color: #183b66;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .f-step {
+    background: #fff;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid #d4e4f7;
+    font-weight: 600;
+  }
+
+  .cards-list { display: flex; flex-direction: column; gap: 12px; }
+  .station-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--panel);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 10px rgba(35,32,28,0.03);
+    transition: all 0.2s ease;
+  }
+  .station-card.active {
+    border-color: var(--blue);
+    background: #fcfdff;
+    box-shadow: 0 8px 24px rgba(29, 78, 137, 0.15);
+  }
+  .station-card.done { border-left: 5px solid var(--green); }
+  .card-audio-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 4px;
+    width: 0%;
+    background: linear-gradient(90deg, #1d4e89, #f0b429);
+    transition: width 0.18s linear;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+  .card-title-wrap { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .step-badge {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--red);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .station-card.active .step-badge { background: var(--blue); }
+  .station-card.done:not(.active) .step-badge { background: var(--green); }
+  .card-title { font-size: 15.5px; font-weight: 700; color: var(--ink); }
+  .tag-new {
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--red-light);
+    color: var(--red);
+    border: 1px solid #f0b8b2;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+  .tag-time {
+    font-size: 11.5px;
+    color: var(--muted);
+    background: #f4f0e8;
+    padding: 2px 7px;
+    border-radius: 6px;
+  }
+
+  .card-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .mini-btn {
+    border: 1px solid var(--border);
+    background: #faf8f4;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .mini-btn:hover { background: #efeae0; }
+  .mini-btn.play-step-btn {
+    background: var(--blue-light);
+    border-color: #bfd6f2;
+    color: var(--blue);
+  }
+  .mini-btn.play-step-btn.speaking {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+  .mini-btn.checked {
+    background: var(--green-light);
+    border-color: #9ae6b4;
+    color: var(--green);
+  }
+
+  .anchor-box { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .anchor-pill {
+    font-size: 12.5px;
+    font-weight: 600;
+    background: var(--gold-light);
+    color: #6b4c00;
+    border: 1px solid #ecd9a4;
+    padding: 4px 10px;
+    border-radius: 8px;
+  }
+  .anchor-pill.danger { background: var(--red-light); color: #9b1c1c; border-color: #f3c1bc; }
+
+  .short-oral {
+    background: #f8fbff;
+    border: 1px solid #d7e6f7;
+    border-radius: 10px;
+    padding: 11px 13px;
+    margin-bottom: 8px;
+  }
+  .station-card.active .short-oral {
+    background: #eef6ff;
+    border-color: #9dc2ec;
+  }
+  .short-oral-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--blue);
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .short-oral p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.82;
+    color: #1f2937;
+  }
+  .short-oral p b { color: var(--blue); font-weight: 700; }
+
+  body.mode-cue .short-oral:not(.peek) { display: none; }
+  body.mode-exam .anchor-box:not(.peek),
+  body.mode-exam .short-oral:not(.peek),
+  body.mode-exam .full-wrap:not(.peek) { display: none; }
+
+  .peek-bar { display: none; margin-bottom: 8px; gap: 8px; }
+  body.mode-cue .peek-bar,
+  body.mode-exam .peek-bar { display: flex; }
+  .peek-btn {
+    border: 1px dashed #b9c8dc;
+    background: #f9fbfe;
+    color: var(--blue);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .full-wrap details {
+    background: #faf8f4;
+    border: 1px solid #eae4d8;
+    border-radius: 9px;
+    padding: 7px 12px;
+  }
+  .full-wrap summary {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+  }
+  .full-wrap summary::-webkit-details-marker { display: none; }
+  .full-wrap summary::after { content: "展开对照 ▾"; font-size: 11.5px; color: var(--blue); }
+  .full-wrap details[open] summary::after { content: "收起原文 ▴"; }
+  .full-text {
+    margin-top: 9px;
+    padding-top: 9px;
+    border-top: 1px dashed #dfd7c8;
+    font-size: 13.5px;
+    line-height: 1.82;
+    color: #443f38;
+    white-space: pre-line;
+  }
+
+  .full-script-footer {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 13px 16px;
+  }
+  .full-script-footer summary { font-size: 13.5px; font-weight: 700; cursor: pointer; }
+
+  .mobile-map-toggle { display: none; }
+
+  /* 手机/窄屏自适应 */
+  @media (max-width: 960px) {
+    html, body { overflow: auto; height: auto; }
+    .app-shell { height: auto; }
+    .sticky-header { position: sticky; top: 0; }
+    .topbar { padding: 6px 10px; gap: 6px; }
+    .spot-tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .spot-tabs::-webkit-scrollbar { display: none; }
+    .spot-tab, .dice-btn { flex-shrink: 0; font-size: 12.5px; padding: 5px 10px; }
+    .right-controls { width: 100%; justify-content: space-between; }
+    .guide-bar { padding: 7px 10px; gap: 7px; }
+    .play-main-btn { font-size: 13px; padding: 7px 13px; }
+    .guide-progress-area { min-width: 180px; }
+    .speed-group { display: none; }
+    .workspace { grid-template-columns: 1fr; padding: 8px 10px 24px; overflow: visible; gap: 10px; }
+    .map-panel { height: auto; padding: 8px 10px; }
+    .map-panel.collapsed .svg-wrap { display: none; }
+    .mobile-map-toggle {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .svg-wrap svg.spot-map-svg { width: 100%; height: auto; max-height: 54vh; }
+    .right-col { height: auto; overflow: visible; padding-right: 0; }
+    .card-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .card-actions { width: 100%; justify-content: flex-end; }
+  }
+</style>
+</head>
+<body class="mode-learn">
+<div class="app-shell">
+
+  <div class="sticky-header">
+    <header class="topbar">
+      <div class="spot-tabs" id="spotTabs"></div>
+
+      <div class="right-controls">
+        <div class="mode-group" role="tablist">
+          <button class="mode-btn active" data-mode="learn">① 边听边看</button>
+          <button class="mode-btn" data-mode="cue">② 提词练嘴</button>
+          <button class="mode-btn" data-mode="exam">③ 仿真机考</button>
+        </div>
+        <div class="timer-box">
+          <span style="font-size:11.5px;color:var(--muted);">13分</span>
+          <span class="timer-display" id="timerDisplay">13:00</span>
+          <button class="t-btn" id="timerToggle">开始</button>
+          <button class="t-btn" id="timerReset">重置</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="guide-bar-wrap">
+      <div class="guide-bar">
+        <button class="play-main-btn" id="playMainBtn">▶ 从头带我听一遍</button>
+        <div class="nav-ctrl">
+          <button class="g-btn" id="prevStepBtn">⏮ 上一站</button>
+          <button class="g-btn" id="nextStepBtn">⏭ 下一站</button>
+        </div>
+
+        <div class="guide-progress-area">
+          <div class="guide-status-row">
+            <span class="guide-now-title" id="guideNowTitle">准备就绪：点黄色按钮，晓晓带你逐站过一遍</span>
+            <span class="guide-time" id="guideTime">00:00 / 00:00</span>
+          </div>
+          <input type="range" class="seek-slider" id="seekSlider" min="0" max="100" value="0" step="0.5">
+        </div>
+
+        <div class="speed-group">
+          <button class="g-btn speed-btn" data-rate="0.9">0.9x</button>
+          <button class="g-btn speed-btn active" data-rate="1.0">1.0x</button>
+          <button class="g-btn speed-btn" data-rate="1.2">1.2x</button>
+          <button class="g-btn speed-btn" data-rate="1.4">1.4x</button>
+        </div>
+
+        <label class="auto-next-lbl">
+          <input type="checkbox" id="autoNextToggle" checked>
+          自动连播下一站
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <main class="workspace">
+    <section class="map-panel" id="mapPanel">
+      <div class="map-toolbar">
+        <div class="map-hint">点图上任意建筑 → <strong>直接跳到那站开听</strong></div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button class="mobile-map-toggle" id="mobileMapToggle" onclick="toggleMobileMap()">🗺️ 收起图</button>
+          <label class="toggle-pill">
+            <input type="checkbox" id="blindMapToggle">
+            遮住图上文字
+          </label>
+        </div>
+      </div>
+      <div class="svg-wrap" id="svgWrap"></div>
+    </section>
+
+    <section class="right-col" id="rightCol">
+      <div class="ticket-box">
+        <div class="ticket-head">
+          <div class="ticket-title" id="ticketTitle">📋 2026 北京机考屏幕原题签</div>
+          <div class="progress-pill" id="progressPill">已过 0 / 9 站</div>
+        </div>
+        <p class="ticket-text" id="ticketText"></p>
+        <div class="ticket-chips" id="ticketChips"></div>
+      </div>
+
+      <div class="exam-banner">
+        <strong>🔴 仿真机考模式：</strong>提示词与口述稿已隐藏。盯着上面 2026 官方题签 + 左图建筑轮廓，点顶部「开始」掐表 13 分钟开口讲！卡壳点卡片里「偷看」即可。
+      </div>
+
+      <div class="formula-bar">
+        <strong>💡 忘词救场 3 句：</strong>
+        <span class="f-step">① 指路（各位往北看…）</span>
+        <span>→</span>
+        <span class="f-step">② 甩 1–2 个硬数字/用途</span>
+        <span>→</span>
+        <span class="f-step">③ 补一句大白话（说白了就是…）</span>
+      </div>
+
+      <div class="cards-list" id="cardsList"></div>
+
+      <div class="full-script-footer">
+        <details id="allFullDetails">
+          <summary id="allFullSummary">📖 完整对照文本（1,600 字完整原讲稿全文，想通读时再展开）</summary>
+          <div class="full-text" id="allFullText"></div>
+        </details>
+      </div>
+    </section>
+  </main>
+
+</div>
+<audio id="voicePlayer" preload="auto"></audio>
+
+<script>
+const SPOTS = [{"id": "tiananmen", "name": "天安门及天安门广场", "short_name": "1. 天安门", "badge": "中轴线心脏", "slogan": "一条中轴穿 6 珠，中间左右看两家（西大会堂、东国博）", "ticket_html": "<strong>一、天安门及天安门广场：</strong>天安门城楼及建筑特点（历史沿革、城楼和城台的建筑规制、“九”在天安门中的体现、明清时期天安门的功能用途、天安门城楼的开放、毛主席画像）；外金水桥（数量和位置、名称和用途、规制）；国旗及旗杆（国旗提案的确定时间、设计者、第一面国旗的收藏地点、旗杆和基座）；人民英雄纪念碑（建造过程和建筑形制、碑文的内容和题写者、浮雕顺序和内容）；毛主席纪念堂（建造过程、门额书写者、内部格局）；正阳门（建成年代、名称含义、明清时期构成部分）；人民大会堂（建成时间、建筑规制、主要构成及用途）；国家博物馆（发展历程、基本陈列的内容）。", "svg": "<svg class=\"spot-map-svg\" viewBox=\"0 0 640 865\" xmlns=\"http://www.w3.org/2000/svg\">\n  \n  <defs>\n    <filter id=\"cardShadow\" x=\"-10%\" y=\"-10%\" width=\"120%\" height=\"125%\">\n      <feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"2.5\" flood-color=\"#2c2419\" flood-opacity=\"0.10\"/>\n    </filter>\n    <filter id=\"activeGlow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">\n      <feDropShadow dx=\"0\" dy=\"0\" stdDeviation=\"4.5\" flood-color=\"#d99a00\" flood-opacity=\"0.55\"/>\n    </filter>\n    <linearGradient id=\"blueTile\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#2e6eb8\"/><stop offset=\"100%\" stop-color=\"#173e6f\"/>\n    </linearGradient>\n    <linearGradient id=\"goldRoof\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#f3c642\"/><stop offset=\"100%\" stop-color=\"#c98c10\"/>\n    </linearGradient>\n    <linearGradient id=\"redWall\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#c83e32\"/><stop offset=\"100%\" stop-color=\"#8f241b\"/>\n    </linearGradient>\n    <linearGradient id=\"lakeBlue\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#d6eaf8\"/><stop offset=\"100%\" stop-color=\"#aed6f1\"/>\n    </linearGradient>\n    <linearGradient id=\"hillGreen\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#7fb084\"/><stop offset=\"100%\" stop-color=\"#527d58\"/>\n    </linearGradient>\n    <radialGradient id=\"marbleGrad\" cx=\"50%\" cy=\"45%\" r=\"55%\">\n      <stop offset=\"0%\" stop-color=\"#ffffff\"/><stop offset=\"100%\" stop-color=\"#e5dfd2\"/>\n    </radialGradient>\n    <marker id=\"arrowRed\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n      <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#b83227\"/>\n    </marker>\n    <marker id=\"arrowBlue\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n      <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#2e6eb8\"/>\n    </marker>\n  </defs>\n\n  <rect x=\"0\" y=\"0\" width=\"640\" height=\"865\" fill=\"#faf6ee\"/>\n  <text x=\"26\" y=\"34\" font-size=\"19\" font-weight=\"700\" fill=\"#1f1b16\">天安门广场 · 记忆宫殿路线图</text>\n  <text x=\"26\" y=\"54\" font-size=\"12\" fill=\"#6e675e\">一句话：中轴从北往南一条线穿 6 珠，中间左右看两家（西大会堂、东国博）</text>\n  \n  <g transform=\"translate(578, 34)\">\n    <circle cx=\"0\" cy=\"0\" r=\"19\" fill=\"#fff\" stroke=\"#d8cfc0\" stroke-width=\"1.2\"/>\n    <polygon points=\"0,-13 4.5,1 0,-2 -4.5,1\" fill=\"#b83227\"/>\n    <polygon points=\"0,13 4.5,1 0,3 -4.5,1\" fill=\"#b7afa1\"/>\n    <text x=\"0\" y=\"-22\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#b83227\">北</text>\n    <text x=\"-26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">西</text>\n    <text x=\"26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">东</text>\n  </g>\n\n\n  <!-- 长安街东西横带 -->\n  <rect x=\"24\" y=\"218\" width=\"592\" height=\"22\" rx=\"4\" fill=\"#ece6da\"/>\n  <text x=\"48\" y=\"233\" font-size=\"10.5\" font-weight=\"600\" fill=\"#7c7366\" class=\"map-label\">← 西长安街</text>\n  <text x=\"592\" y=\"233\" text-anchor=\"end\" font-size=\"10.5\" font-weight=\"600\" fill=\"#7c7366\" class=\"map-label\">东长安街 →</text>\n\n  <!-- 广场大底框（44万㎡ 880×500） -->\n  <rect x=\"180\" y=\"250\" width=\"280\" height=\"432\" rx=\"14\" fill=\"#f3efe5\" stroke=\"#cfc6b4\" stroke-width=\"1.6\"/>\n  <text x=\"320\" y=\"268\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#8b7d68\" class=\"map-label\">广场主体：44 万㎡（南北 880m × 东西 500m）</text>\n\n  <!-- 中轴线动线箭头（从北往南） -->\n  <g fill=\"none\" stroke=\"#b83227\" stroke-width=\"2.2\" stroke-dasharray=\"5 3\">\n    <line x1=\"320\" y1=\"158\" x2=\"320\" y2=\"174\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"214\" x2=\"320\" y2=\"278\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"348\" x2=\"320\" y2=\"378\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"494\" x2=\"320\" y2=\"524\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"628\" x2=\"320\" y2=\"692\" marker-end=\"url(#arrowRed)\"/>\n  </g>\n\n  <!-- 站 1：天安门城楼（最北） -->\n  <g class=\"map-node\" data-step=\"1\">\n    <rect class=\"hl-ring\" x=\"128\" y=\"72\" width=\"384\" height=\"84\" rx=\"13\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"130\" y=\"74\" width=\"380\" height=\"80\" rx=\"12\" fill=\"#ffffff\" stroke=\"#c83e32\" stroke-width=\"1.6\" filter=\"url(#cardShadow)\"/>\n    <!-- 天安门城楼剪影（重檐歇山黄顶 + 红城台 + 5券门 + 画像） -->\n    <g transform=\"translate(154, 83)\">\n      <polygon points=\"18,16 32,4 98,4 112,16\" fill=\"url(#goldRoof)\" stroke=\"#9e6d08\" stroke-width=\"1\"/>\n      <polygon points=\"10,27 20,16 110,16 120,27\" fill=\"url(#goldRoof)\" stroke=\"#9e6d08\" stroke-width=\"1\"/>\n      <rect x=\"16\" y=\"27\" width=\"98\" height=\"12\" fill=\"#9c251c\"/>\n      <rect x=\"6\" y=\"39\" width=\"118\" height=\"26\" rx=\"2\" fill=\"url(#redWall)\"/>\n      <!-- 5券门 -->\n      <path d=\"M 18 65 L 18 54 A 5 5 0 0 1 28 54 L 28 65 Z\" fill=\"#faf6ee\"/>\n      <path d=\"M 36 65 L 36 53 A 5 5 0 0 1 46 53 L 46 65 Z\" fill=\"#faf6ee\"/>\n      <path d=\"M 57 65 L 57 50 A 8 8 0 0 1 73 50 L 73 65 Z\" fill=\"#faf6ee\"/>\n      <path d=\"M 84 65 L 84 53 A 5 5 0 0 1 94 53 L 94 65 Z\" fill=\"#faf6ee\"/>\n      <path d=\"M 102 65 L 102 54 A 5 5 0 0 1 112 54 L 112 65 Z\" fill=\"#faf6ee\"/>\n      <!-- 毛主席画像位置 -->\n      <rect x=\"60\" y=\"40\" width=\"10\" height=\"10\" rx=\"1\" fill=\"#f3c642\" stroke=\"#fff\" stroke-width=\"0.8\"/>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"144\" cy=\"89\" r=\"11.5\" fill=\"#b83227\"/>\n    <text x=\"144\" y=\"93\" text-anchor=\"middle\" font-size=\"11.5\" font-weight=\"700\" fill=\"#fff\">1</text>\n    <g class=\"map-label\">\n      <text x=\"292\" y=\"95\" font-size=\"14\" font-weight=\"700\" fill=\"#9c251c\">天安门城楼（皇城正门 ≠ 故宫午门）</text>\n      <text x=\"292\" y=\"114\" font-size=\"10.8\" fill=\"#332e28\">1417 承天门(蒯祥) → 1651 顺治改天安门</text>\n      <text x=\"292\" y=\"130\" font-size=\"10.8\" font-weight=\"700\" fill=\"#1d4e89\">“九”：9间5进 · 5券门 · 81门钉 · 金凤颁诏</text>\n      <text x=\"292\" y=\"145\" font-size=\"10.2\" fill=\"#6e675e\">1988 元旦开放 · 正中挂毛主席画像</text>\n    </g>\n  </g>\n\n  <!-- 站 2：外金水桥（7座汉白玉桥） -->\n  <g class=\"map-node\" data-step=\"2\">\n    <rect class=\"hl-ring\" x=\"150\" y=\"172\" width=\"340\" height=\"42\" rx=\"10\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <!-- 外金水河蓝带 -->\n    <rect x=\"152\" y=\"174\" width=\"336\" height=\"38\" rx=\"9\" fill=\"#d6eaf8\" stroke=\"#6aa2cf\" stroke-width=\"1.4\" filter=\"url(#cardShadow)\"/>\n    <!-- 7座汉白玉小桥示意 -->\n    <g fill=\"#ffffff\" stroke=\"#8aa8bf\" stroke-width=\"1\">\n      <rect x=\"218\" y=\"176\" width=\"14\" height=\"34\" rx=\"2\"/>\n      <rect x=\"242\" y=\"176\" width=\"16\" height=\"34\" rx=\"2\"/>\n      <rect x=\"268\" y=\"176\" width=\"18\" height=\"34\" rx=\"2\"/>\n      <rect x=\"306\" y=\"174\" width=\"28\" height=\"38\" rx=\"2\" fill=\"#fdf7e3\" stroke=\"#c9951a\" stroke-width=\"1.4\"/>\n      <rect x=\"354\" y=\"176\" width=\"18\" height=\"34\" rx=\"2\"/>\n      <rect x=\"382\" y=\"176\" width=\"16\" height=\"34\" rx=\"2\"/>\n      <rect x=\"408\" y=\"176\" width=\"14\" height=\"34\" rx=\"2\"/>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"168\" cy=\"193\" r=\"11\" fill=\"#b83227\"/>\n    <text x=\"168\" y=\"197\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">2</text>\n    <g class=\"map-label\">\n      <rect x=\"234\" y=\"177\" width=\"172\" height=\"32\" rx=\"7\" fill=\"rgba(255,255,255,0.92)\" stroke=\"#8eb8dc\" stroke-width=\"1\"/>\n      <text x=\"320\" y=\"191\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#1d4e89\">外金水桥 7 座（≠内5座）</text>\n      <text x=\"320\" y=\"205\" text-anchor=\"middle\" font-size=\"9.8\" font-weight=\"700\" fill=\"#9c251c\">1御 · 2王 · 2品 · 2公</text>\n    </g>\n  </g>\n\n  <!-- 站 3：国旗及旗杆 -->\n  <g class=\"map-node\" data-step=\"3\">\n    <rect class=\"hl-ring\" x=\"200\" y=\"278\" width=\"240\" height=\"68\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"202\" y=\"280\" width=\"236\" height=\"64\" rx=\"10\" fill=\"#ffffff\" stroke=\"#d89289\" stroke-width=\"1.4\" filter=\"url(#cardShadow)\"/>\n    <!-- 国旗剪影 -->\n    <g transform=\"translate(230, 290)\">\n      <line x1=\"8\" y1=\"4\" x2=\"8\" y2=\"44\" stroke=\"#7c7366\" stroke-width=\"2.4\"/>\n      <rect x=\"8\" y=\"6\" width=\"28\" height=\"19\" rx=\"1\" fill=\"#d92b21\"/>\n      <circle cx=\"15\" cy=\"13\" r=\"2.6\" fill=\"#f3c642\"/>\n      <rect x=\"1\" y=\"42\" width=\"14\" height=\"5\" rx=\"1\" fill=\"#e5dfd2\" stroke=\"#a69b89\"/>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"216\" cy=\"294\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"216\" y=\"298\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">3</text>\n    <g class=\"map-label\">\n      <text x=\"276\" y=\"299\" font-size=\"13\" font-weight=\"700\" fill=\"#b83227\">国旗及旗杆 · 32.6 米</text>\n      <text x=\"276\" y=\"316\" font-size=\"10.2\" fill=\"#332e28\">1949.9.27 定 · 设计者曾联松</text>\n      <text x=\"276\" y=\"331\" font-size=\"10.2\" fill=\"#1d4e89\" font-weight=\"600\">第一面藏国博 · 56民族铜墩</text>\n    </g>\n  </g>\n\n  <!-- 站 4：人民英雄纪念碑（广场中心） -->\n  <g class=\"map-node\" data-step=\"4\">\n    <rect class=\"hl-ring\" x=\"194\" y=\"378\" width=\"252\" height=\"114\" rx=\"12\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"196\" y=\"380\" width=\"248\" height=\"110\" rx=\"11\" fill=\"#ffffff\" stroke=\"#8a7962\" stroke-width=\"1.6\" filter=\"url(#cardShadow)\"/>\n    <!-- 纪念碑剪影 -->\n    <g transform=\"translate(216, 392)\">\n      <polygon points=\"16,4 22,12 22,68 10,68 10,12\" fill=\"#dcd4c6\" stroke=\"#7d7263\" stroke-width=\"1.2\"/>\n      <rect x=\"5\" y=\"68\" width=\"22\" height=\"10\" fill=\"#cfc6b4\" stroke=\"#7d7263\"/>\n      <rect x=\"0\" y=\"78\" width=\"32\" height=\"8\" fill=\"#bfb5a2\" stroke=\"#7d7263\"/>\n      <text x=\"16\" y=\"42\" text-anchor=\"middle\" font-size=\"7\" font-weight=\"700\" fill=\"#9c251c\">永垂</text>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"210\" cy=\"394\" r=\"11\" fill=\"#b83227\"/>\n    <text x=\"210\" y=\"398\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">4</text>\n    <g class=\"map-label\">\n      <text x=\"256\" y=\"401\" font-size=\"13.5\" font-weight=\"700\" fill=\"#23201c\">人民英雄纪念碑 · 37.94m</text>\n      <text x=\"256\" y=\"418\" font-size=\"10.2\" fill=\"#4f4840\">1949奠基 · 1958建成 · 梁思成</text>\n      <text x=\"256\" y=\"434\" font-size=\"10.5\" font-weight=\"700\" fill=\"#b83227\">碑文：毛起草、周书写（别反）</text>\n      <rect x=\"254\" y=\"442\" width=\"180\" height=\"39\" rx=\"6\" fill=\"#fdf7e3\" stroke=\"#ecd9a4\"/>\n      <text x=\"344\" y=\"457\" text-anchor=\"middle\" font-size=\"9.5\" font-weight=\"700\" fill=\"#6b4c00\">8块浮雕：虎门·金田·武昌·五四</text>\n      <text x=\"344\" y=\"472\" text-anchor=\"middle\" font-size=\"9.5\" font-weight=\"700\" fill=\"#1d4e89\">五卅·南昌·抗日·胜利渡长江</text>\n    </g>\n  </g>\n\n  <!-- 站 5：毛主席纪念堂（北碑南堂） -->\n  <g class=\"map-node\" data-step=\"5\">\n    <rect class=\"hl-ring\" x=\"196\" y=\"524\" width=\"248\" height=\"102\" rx=\"12\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"198\" y=\"526\" width=\"244\" height=\"98\" rx=\"11\" fill=\"#ffffff\" stroke=\"#c89228\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <!-- 纪念堂剪影 -->\n    <g transform=\"translate(212, 550)\">\n      <rect x=\"2\" y=\"6\" width=\"38\" height=\"6\" fill=\"url(#goldRoof)\"/>\n      <rect x=\"5\" y=\"12\" width=\"32\" height=\"28\" fill=\"#f3efe5\" stroke=\"#9e8e74\"/>\n      <line x1=\"12\" y1=\"12\" x2=\"12\" y2=\"40\" stroke=\"#b7ab96\" stroke-width=\"1.6\"/>\n      <line x1=\"21\" y1=\"12\" x2=\"21\" y2=\"40\" stroke=\"#b7ab96\" stroke-width=\"1.6\"/>\n      <line x1=\"30\" y1=\"12\" x2=\"30\" y2=\"40\" stroke=\"#b7ab96\" stroke-width=\"1.6\"/>\n      <rect x=\"0\" y=\"40\" width=\"42\" height=\"6\" fill=\"#c83e32\"/>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"212\" cy=\"540\" r=\"11\" fill=\"#b83227\"/>\n    <text x=\"212\" y=\"544\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">5</text>\n    <g class=\"map-label\">\n      <text x=\"262\" y=\"548\" font-size=\"13.5\" font-weight=\"700\" fill=\"#23201c\">毛主席纪念堂</text>\n      <text x=\"262\" y=\"566\" font-size=\"10.4\" font-weight=\"700\" fill=\"#b83227\">北碑南堂（1976动工·1977成）</text>\n      <text x=\"262\" y=\"584\" font-size=\"10.2\" fill=\"#332e28\">门额：华国锋题写</text>\n      <text x=\"262\" y=\"601\" font-size=\"10.2\" font-weight=\"600\" fill=\"#1d4e89\">中轴三厅：北大厅→瞻仰厅→南大厅</text>\n    </g>\n  </g>\n\n  <!-- 站 6：人民大会堂（广场西侧=左！） -->\n  <g class=\"map-node\" data-step=\"6\">\n    <rect class=\"hl-ring\" x=\"24\" y=\"340\" width=\"144\" height=\"224\" rx=\"13\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"26\" y=\"342\" width=\"140\" height=\"220\" rx=\"12\" fill=\"#fffdf8\" stroke=\"#1d4e89\" stroke-width=\"1.6\" filter=\"url(#cardShadow)\"/>\n    <!-- “山”字形建筑图标 -->\n    <g transform=\"translate(56, 376)\" fill=\"#e8f1fb\" stroke=\"#1d4e89\" stroke-width=\"1.5\">\n      <path d=\"M 10 0 L 10 58 L 70 58 L 70 0 L 58 0 L 58 42 L 46 42 L 46 10 L 34 10 L 34 42 L 22 42 L 22 0 Z\"/>\n      <text x=\"40\" y=\"54\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"700\" fill=\"#1d4e89\" stroke=\"none\">山字形</text>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"42\" cy=\"358\" r=\"11\" fill=\"#b83227\"/>\n    <text x=\"42\" y=\"362\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">6</text>\n    <g class=\"map-label\">\n      <text x=\"58\" y=\"362\" font-size=\"13\" font-weight=\"700\" fill=\"#1d4e89\">人民大会堂</text>\n      <text x=\"96\" y=\"456\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#b83227\">广场西侧（左）</text>\n      <text x=\"96\" y=\"476\" text-anchor=\"middle\" font-size=\"10.2\" fill=\"#332e28\">1959 建成（10个月）</text>\n      <text x=\"96\" y=\"493\" text-anchor=\"middle\" font-size=\"10.2\" fill=\"#332e28\">总设计师：张镈</text>\n      <text x=\"96\" y=\"513\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"600\" fill=\"#1d4e89\">① 万人大礼堂</text>\n      <text x=\"96\" y=\"529\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"600\" fill=\"#1d4e89\">② 北面宴会厅</text>\n      <text x=\"96\" y=\"545\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"600\" fill=\"#1d4e89\">③ 人大常委会办公楼</text>\n    </g>\n  </g>\n\n  <!-- 站 7：中国国家博物馆（广场东侧=右！） -->\n  <g class=\"map-node\" data-step=\"7\">\n    <rect class=\"hl-ring\" x=\"472\" y=\"340\" width=\"144\" height=\"224\" rx=\"13\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"474\" y=\"342\" width=\"140\" height=\"220\" rx=\"12\" fill=\"#fffdf8\" stroke=\"#8c5a2b\" stroke-width=\"1.6\" filter=\"url(#cardShadow)\"/>\n    <!-- 博物馆柱廊剪影 -->\n    <g transform=\"translate(500, 380)\">\n      <rect x=\"0\" y=\"0\" width=\"88\" height=\"10\" fill=\"#8c5a2b\"/>\n      <rect x=\"4\" y=\"10\" width=\"80\" height=\"36\" fill=\"#f4eee2\" stroke=\"#8c5a2b\"/>\n      <line x1=\"18\" y1=\"10\" x2=\"18\" y2=\"46\" stroke=\"#b89872\" stroke-width=\"2.5\"/>\n      <line x1=\"34\" y1=\"10\" x2=\"34\" y2=\"46\" stroke=\"#b89872\" stroke-width=\"2.5\"/>\n      <line x1=\"54\" y1=\"10\" x2=\"54\" y2=\"46\" stroke=\"#b89872\" stroke-width=\"2.5\"/>\n      <line x1=\"70\" y1=\"10\" x2=\"70\" y2=\"46\" stroke=\"#b89872\" stroke-width=\"2.5\"/>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"490\" cy=\"358\" r=\"11\" fill=\"#b83227\"/>\n    <text x=\"490\" y=\"362\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">7</text>\n    <g class=\"map-label\">\n      <text x=\"506\" y=\"362\" font-size=\"12.5\" font-weight=\"700\" fill=\"#7c4a1d\">国家博物馆</text>\n      <text x=\"544\" y=\"448\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#b83227\">广场东侧（右）</text>\n      <text x=\"544\" y=\"469\" text-anchor=\"middle\" font-size=\"10.2\" fill=\"#332e28\">源头 1912 筹备处</text>\n      <text x=\"544\" y=\"486\" text-anchor=\"middle\" font-size=\"10.2\" fill=\"#332e28\">2003 历史+革命合并</text>\n      <text x=\"544\" y=\"505\" text-anchor=\"middle\" font-size=\"10\" fill=\"#5e574e\">世界最大单体博之一</text>\n      <rect x=\"486\" y=\"514\" width=\"116\" height=\"36\" rx=\"7\" fill=\"#fdf7e3\" stroke=\"#ecd9a4\"/>\n      <text x=\"544\" y=\"529\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"700\" fill=\"#6b4c00\">两大基本陈列：</text>\n      <text x=\"544\" y=\"544\" text-anchor=\"middle\" font-size=\"10.2\" font-weight=\"700\" fill=\"#1d4e89\">古代中国 + 复兴之路</text>\n    </g>\n  </g>\n\n  <!-- 站 8：正阳门（前门·南端） -->\n  <g class=\"map-node\" data-step=\"8\">\n    <rect class=\"hl-ring\" x=\"150\" y=\"694\" width=\"340\" height=\"72\" rx=\"12\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"152\" y=\"696\" width=\"336\" height=\"68\" rx=\"11\" fill=\"#ffffff\" stroke=\"#7d7263\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <!-- 正阳门城楼+箭楼双剪影 -->\n    <g transform=\"translate(174, 710)\">\n      <polygon points=\"4,12 12,3 38,3 46,12\" fill=\"#596d7e\"/>\n      <rect x=\"8\" y=\"12\" width=\"34\" height=\"24\" fill=\"#8b7d6b\"/>\n      <path d=\"M 20 36 L 20 25 A 5 5 0 0 1 30 25 L 30 36 Z\" fill=\"#faf6ee\"/>\n      <rect x=\"52\" y=\"16\" width=\"24\" height=\"20\" fill=\"#a29482\"/>\n      <polygon points=\"49,16 56,9 72,9 79,16\" fill=\"#596d7e\"/>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"168\" cy=\"712\" r=\"11\" fill=\"#b83227\"/>\n    <text x=\"168\" y=\"716\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">8</text>\n    <g class=\"map-label\">\n      <text x=\"266\" y=\"716\" font-size=\"13.5\" font-weight=\"700\" fill=\"#23201c\">正阳门（前门 · 广场南端收尾）</text>\n      <text x=\"266\" y=\"735\" font-size=\"10.4\" fill=\"#332e28\">明永乐年间建 · 明清内城正南门（日中之门）</text>\n      <text x=\"266\" y=\"752\" font-size=\"10.4\" font-weight=\"700\" fill=\"#1d4e89\">明清三部分：城楼 + 箭楼 + 瓮城</text>\n    </g>\n  </g>\n\n  <!-- 站 0：底部开场定位横幅 -->\n  <g class=\"map-node\" data-step=\"0\">\n    <rect class=\"hl-ring\" x=\"28\" y=\"782\" width=\"584\" height=\"68\" rx=\"13\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"30\" y=\"784\" width=\"580\" height=\"64\" rx=\"12\" fill=\"#1d4e89\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"54\" cy=\"816\" r=\"13\" fill=\"#f3c642\"/>\n    <text x=\"54\" y=\"821\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"800\" fill=\"#1f1b16\">0</text>\n    <g class=\"map-label\">\n      <text x=\"78\" y=\"809\" font-size=\"13.5\" font-weight=\"700\" fill=\"#ffffff\">开场定调：世界最大城市中心广场（中轴线从北往南走）</text>\n      <text x=\"78\" y=\"831\" font-size=\"11.5\" fill=\"#d9e8fa\">四硬数字：44 万㎡ ｜ 南北 880m × 东西 500m ｜ 旗杆 32.6m ｜ 纪念碑 37.94m</text>\n    </g>\n  </g>\n</svg>", "stations": [{"step": 0, "chip": "0. 广场概况与动线", "title": "开场定位 + 广场硬数字与方位", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "44 万㎡ · 可容 100 万人"}, {"text": "南北长 880 米 × 东西宽 500 米", "danger": true}, {"text": "中轴从北往南：1→6 + 左右 7/8"}], "shortOral": "各位朋友大家好，欢迎来到北京的心脏——<b>天安门广场</b>，这是全世界最大的城市中心广场。先记住一组硬数字：它<b>南北长880米、东西宽500米，总面积44万平方米</b>，能同时容纳<b>100万人</b>集会。今天咱们沿着北京中轴线<b>从北往南走一遍</b>：先看天安门城楼和外金水桥，再看国旗、纪念碑、纪念堂，顺手左右看一眼人民大会堂和国家博物馆，最后望向南端的正阳门。", "fullText": "各位游客朋友们，大家好！欢迎来到北京的心脏，天安门广场。我是今天的导游，很荣幸能陪大家一起走一走这片全世界最大的城市中心广场。\n\n咱们先站定，把方位说清楚。广场南北长八百八十米，东西宽五百米，总面积四十四万平方米，可以容纳一百万人同时集会。您现在脚下这条南北向的线，就是北京城的中轴线，广场上的主要建筑，全都沿着它依次排开。今天咱们的路线是从北往南走，先看城楼和金水桥，再看国旗、纪念碑和纪念堂，最后环顾东西两侧的建筑和南端的正阳门。"}, {"step": 1, "chip": "1. 天安门城楼", "title": "天安门城楼（沿革 · 九的体现 · 开放与画像）", "time": "约 2 分钟", "isNew": false, "anchors": [{"text": "1417 承天门(蒯祥) → 1651 顺治改天安门"}, {"text": "皇城正门 ≠ 故宫正门（午门）", "danger": true}, {"text": "重檐歇山 · 九间五进 · 5券门 · 9×9=81门钉"}, {"text": "金凤颁诏 · 1988 元旦开放 · 毛主席画像"}], "shortOral": "抬头往北看，这就是<b>天安门城楼</b>。它<b>1417年</b>（明永乐十五年）由匠师<b>蒯祥</b>主持建，原名<b>承天门</b>；清<b>顺治八年（1651年）</b>重建改叫天安门。记住它是<b>皇城正门，不是故宫正门（故宫正门是午门）</b>！建筑上处处是“<b>九</b>”：重檐歇山黄瓦顶，<b>面阔9间、进深5间</b>暗合九五之尊，城台开<b>5个券门</b>，大门门钉横9竖9共<b>81颗</b>。明清在这儿举行<b>金凤颁诏</b>等大典；1949年开国大典后画进国徽，正中挂<b>毛主席画像</b>，<b>1988年元旦</b>正式向公众开放。", "fullText": "请抬头往北看，广场北端这座巍峨的城楼就是天安门。它始建于明永乐十五年，最初叫承天门，取承天启运、受命于天的意思，由明代匠师蒯祥主持设计。清朝顺治八年改建后，才改名叫天安门，取受命于天、安邦治国之意。您注意看，它是由下面的城台和上面的城楼两部分组成的。城楼是重檐歇山顶，黄琉璃瓦，面阔九间、进深五间，暗合九五之尊；门窗是菱花格扇，一共三十六扇。城台开有五个券门，中间那座最宽最高，过去只有皇帝能走。门上金钉横九排、竖九列，八十一颗，九这个数字是阳数之极，在天安门上反复出现，就是皇权至高无上的表达。\n\n明清两代，这儿是皇城的正门，是国家典礼的场所。皇帝登基、册立皇后、命将出征，都要从这里出入，诏书也要用金凤凰从城楼上降下，叫金凤颁诏。这里我要提醒一句，天安门是皇城的正门，不是故宫的正门，故宫的正门是它北边的午门，很多人一开口就讲错。\n\n到了近现代，天安门有了新的身份。一九四九年十月一日，开国大典在这里举行，它后来被画进国徽，成为中华人民共和国的象征。城楼正中悬挂着毛主席画像，两边是中华人民共和国万岁和世界人民大团结万岁两幅标语。一九八八年元旦，天安门城楼正式对公众开放，从那以后，咱们普通人也能登上城楼，回望整个广场。"}, {"step": 2, "chip": "2. 外金水桥", "title": "外金水桥（7 座等级桥）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "外金水桥 7 座（≠ 故宫内金水桥 5 座）", "danger": true}, {"text": "汉白玉石桥 · 跨外金水河"}, {"text": "口诀：1御、2王、2品、2公"}], "shortOral": "目光往城楼下移，外金水河上横跨着<b>7座汉白玉石桥</b>，叫<b>外金水桥</b>——别和故宫里面的5座内金水桥搞混！7座桥等级森严，记口诀“<b>1御、2王、2品、2公</b>”：中间最宽的1座<b>御路桥</b>只走皇帝；两边2座<b>王公桥</b>走亲王；再外侧2座<b>品级桥</b>走三品以上大官；最外边2座<b>公生桥</b>给四品以下官员和兵丁走。说白了，走哪座桥全看官多大。", "fullText": "好，请把目光从城楼往下移。眼前这条弯弯的水叫外金水河，河上横跨着七座汉白玉石桥，合称外金水桥。这七座桥不是随便排的，等级分得清清楚楚：正中最宽的那座叫御路桥，只走皇帝；左右两座叫王公桥，走宗室亲王；再外侧两座叫品级桥，三品以上文武大臣才能通行；最靠外的两座叫公生桥，供四品以下官员和兵丁行走。一座桥就是一部等级制度，您站在这儿一眼就能看懂。"}, {"step": 3, "chip": "3. 国旗及旗杆", "title": "国旗及旗杆（32.6 米 · 曾联松）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "1949.9.27 政协确定五星红旗"}, {"text": "设计者：浙江曾联松"}, {"text": "第一面国旗藏于：中国国家博物馆"}, {"text": "旗杆高约 32.6 米 · 三层基座 · 56 民族铜墩"}], "shortOral": "过桥往南就是每天和太阳一同升旗的<b>国旗区</b>。<b>1949年9月27日</b>，全国政协第一届全体会议正式确定五星红旗为国旗，设计者是浙江人<b>曾联松</b>；开国大典毛主席亲手升起的第一面国旗，现在珍藏在旁边的<b>中国国家博物馆</b>里。眼前这根旗杆高约<b>32.6米</b>，基座分三层，周围立着象征<b>56个民族</b>的铜墩，寓意各民族团结在国旗下。", "fullText": "过桥往南，就到了升旗区。每天清晨，五星红旗在这里和太阳一同升起。这面旗的设计者是浙江人曾联松，一九四九年九月二十七日，中国人民政治协商会议第一届全体会议正式确定五星红旗为中华人民共和国国旗。开国大典上由毛主席亲手升起的第一面国旗，如今珍藏在中国国家博物馆。现在这根旗杆高约三十二点六米，基座分三层，周边有象征五十六个民族的铜墩，寓意五十六个民族手拉手，团结在国旗下。"}, {"step": 4, "chip": "4. 人民英雄纪念碑", "title": "人民英雄纪念碑（37.94 米 · 碑文与八大浮雕）", "time": "约 2 分钟", "isNew": false, "anchors": [{"text": "1949.9.30 奠基 · 1952 动工 · 1958 建成（梁思成设计）"}, {"text": "通高 37.94 米 · 新中国广场第一座建筑"}, {"text": "正面毛题字 · 背面毛起草/周书写", "danger": true}, {"text": "8块浮雕：虎门→金田→武昌→五四→五卅→南昌→抗日→渡江"}], "shortOral": "走到广场正中心，高耸的是<b>人民英雄纪念碑</b>。<b>1949年9月30日</b>决议奠基，<b>1952年</b>动工、<b>1958年</b>建成，由<b>梁思成</b>等主持设计，通高<b>37.94米</b>。正面是毛主席题写的“人民英雄永垂不朽”；背面碑文记住别说反——<b>毛主席起草、周总理书写</b>，“三年”指解放战争、“三十年”从五四算起、“1840年”从鸦片战争算起。下层有<b>8块汉白玉大浮雕</b>，顺着中国近代史走一圈：<b>虎门销烟、金田起义、武昌起义、五四运动、五卅运动、南昌起义、抗日游击战争、胜利渡长江</b>，外加支前和欢迎解放军2幅装饰浮雕。", "fullText": "再往前，广场中心这座高高耸立的，是人民英雄纪念碑。一九四九年九月三十日，政协会议通过建碑决议，当天傍晚举行奠基；一九五二年动工，一九五八年建成揭幕。碑通高三十七点九四米，用青岛浮山的花岗岩和汉白玉砌成，是新中国在广场上建成的第一座建筑，也是中国历史上最大的一座纪念碑，由梁思成等先生主持设计。请您走近看：碑身正面是毛泽东题写的人民英雄永垂不朽八个镏金大字；背面碑文由毛泽东起草、周恩来书写。碑文里三年以来，指的是解放战争时期；三十年以来，从五四运动算起；上溯到一千八百四十年，则从鸦片战争算起。下层须弥座上嵌着八块汉白玉浮雕，按历史顺序是虎门销烟、金田起义、武昌起义、五四运动、五卅运动、南昌起义、抗日游击战争、胜利渡长江，两侧另有支援前线和欢迎中国人民解放军两幅装饰浮雕。走一遍浮雕，就等于把中国近代史走了一遍。"}, {"step": 5, "chip": "5. 毛主席纪念堂", "title": "毛主席纪念堂（北碑南堂 · 内部三厅）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "北碑南堂别讲反（先英雄后主席）", "danger": true}, {"text": "1976 动工 · 1977 建成"}, {"text": "门额“毛主席纪念堂”：华国锋题写"}, {"text": "内部中轴对称：北大厅 → 瞻仰厅（核心）→ 南大厅"}], "shortOral": "纪念碑往南是<b>毛主席纪念堂</b>，记住“<b>北碑南堂</b>”别讲反——时间上先建纪念碑（1949决议），后建纪念堂（<b>1976动工、1977建成</b>）。大门上方汉白玉门额“毛主席纪念堂”六个鎏金大字由<b>华国锋</b>题写。里面按中轴线一字排开：<b>北大厅、瞻仰厅、南大厅</b>，最核心的就是瞻仰厅，参观时大家保持庄严肃静。", "fullText": "纪念碑南面是毛主席纪念堂。纪念堂一九七六年动工、一九七七年建成，大门正上方汉白玉匾额上毛主席纪念堂六个鎏金大字，由华国锋题写。内部按一字中轴、对称布局，依次是北大厅、瞻仰厅和南大厅，核心是瞻仰厅。这里是党和国家的最高纪念堂，参观时请保持安静。"}, {"step": 6, "chip": "6. 人民大会堂（西）", "title": "人民大会堂（广场西侧 · 山字形）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "西大会堂、东国博（别左右互换！）", "danger": true}, {"text": "1959 年建成（仅用 10 个月 · 十大建筑）"}, {"text": "平面呈“山”字形 · 张镈总设计"}, {"text": "三部分：万人大礼堂 + 宴会厅(北) + 人大常委会办公楼"}], "shortOral": "现在咱们往<b>广场西侧</b>看，这座宏伟建筑是<b>人民大会堂</b>——牢记“<b>西大会堂、东国博</b>”！它<b>1959年</b>建成，从设计到完工只花了<b>10个月</b>，是国庆十周年十大建筑之一，总设计师张镈。平面像一个“<b>山</b>”字，主要由<b>万人大礼堂、北面宴会厅和全国人大常委会办公楼</b>三部分组成，是召开全国两会和举行重大外交国事活动的国家殿堂。", "fullText": "好，咱们现在环顾四周。广场西侧是人民大会堂，一九五九年建成，从设计到完工只用了十个月，是新中国建筑史上的奇迹。平面呈山字形，主要由万人大礼堂、宴会厅和人大常委会办公楼三部分构成，是全国人民代表大会开会、国家举行重大政治和外交活动的地方。"}, {"step": 7, "chip": "7. 国家博物馆（东）", "title": "中国国家博物馆（广场东侧 · 两大基本陈列）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "位于广场东侧 · 遥对人民大会堂"}, {"text": "源头 1912 国立历史博物馆筹备处"}, {"text": "2003 年合并组建（历史博 + 革命博）"}, {"text": "基本陈列：《古代中国》+《复兴之路》"}], "shortOral": "转身往<b>广场东侧</b>看，与大会堂遥遥相对的是<b>中国国家博物馆</b>。它的源头可以追溯到<b>1912年</b>的国立历史博物馆筹备处，<b>2003年</b>由中国历史博物馆和中国革命博物馆合并组建，是世界单体建筑面积最大的博物馆之一。去里面最不能错过的两大基本陈列，就是《<b>古代中国</b>》和《<b>复兴之路</b>》，一部中华文明史全在里头。", "fullText": "广场东侧与它遥相呼应的是中国国家博物馆，源头可以追溯到一九一二年成立的国立历史博物馆筹备处，二零零三年由中国历史博物馆和中国革命博物馆合并组建，是当今世界单体建筑面积最大的博物馆之一，基本陈列以古代中国和复兴之路两大主题展开。"}, {"step": 8, "chip": "8. 正阳门与收尾", "title": "正阳门（前门）+ 价值收尾", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "建于明永乐年间 · 明清内城正南门"}, {"text": "正阳含义：日中之门、至高无上"}, {"text": "明清三部分：城楼 + 箭楼 + 瓮城"}], "shortOral": "最后望向广场最南端，那座老北京叫“前门”的古老城楼就是<b>正阳门</b>。它建于<b>明永乐年间</b>，是明清北京<b>内城的正南门</b>，“正阳”取日中之门、至高无上的意思。明清时它由<b>城楼、箭楼和瓮城</b>三部分组成，如今留下的城楼和箭楼是老北京城墙的珍贵见证。\n各位朋友，从六百年前的承天门走到今天的国家殿堂，这条中轴线浓缩了中国的过去与现在。我的讲解到此结束，谢谢大家！", "fullText": "最后请往南看，那座古老的城楼叫正阳门，老百姓习惯叫它前门。它建于明永乐年间，是明清北京内城的正南门，正阳二字取日中之门、至高无上之意，由城楼、箭楼和瓮城三部分组成。如今城楼和箭楼，是老北京城垣留下的重要见证。\n\n各位朋友，咱们从六百年前的承天门，走到今天的国旗杆下；从纪念碑上的人民英雄，走到广场两侧的国家殿堂。这一条中轴线，写满了中国的过去、现在和将来。天安门广场的讲解就到这里，谢谢大家，接下来请大家自由参观，注意集合时间。"}], "audios": ["audio/tiananmen/step_0.mp3", "audio/tiananmen/step_1.mp3", "audio/tiananmen/step_2.mp3", "audio/tiananmen/step_3.mp3", "audio/tiananmen/step_4.mp3", "audio/tiananmen/step_5.mp3", "audio/tiananmen/step_6.mp3", "audio/tiananmen/step_7.mp3", "audio/tiananmen/step_8.mp3"]}, {"id": "gugong", "name": "故宫", "short_name": "2. 故宫", "badge": "2026 新增养心殿", "slogan": "一条中轴、前朝后寝、两翼拱卫，后三宫往西拐进养心殿", "ticket_html": "<strong>二、故宫：</strong>故宫的历史沿革（紫禁城名称的由来、建筑年代、迁都原因、故宫博物院的成立时间），整体布局（占地面积、长宽、城墙、筒子河、角楼、紫禁城四门、前朝后寝、中轴线主要建筑名称、前朝两翼、东西六宫名称、外东路、外西路）；中轴线前朝三大殿及中轴线后三宫（建筑规制、作用、内外陈设）；<strong>养心殿</strong>（建筑布局、功能及作用）；御花园（建筑布局、重要陈设）；列入世界文化遗产的时间。", "svg": "<svg class=\"spot-map-svg\" viewBox=\"0 0 640 865\" xmlns=\"http://www.w3.org/2000/svg\">\n  \n  <defs>\n    <filter id=\"cardShadow\" x=\"-10%\" y=\"-10%\" width=\"120%\" height=\"125%\">\n      <feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"2.5\" flood-color=\"#2c2419\" flood-opacity=\"0.10\"/>\n    </filter>\n    <filter id=\"activeGlow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">\n      <feDropShadow dx=\"0\" dy=\"0\" stdDeviation=\"4.5\" flood-color=\"#d99a00\" flood-opacity=\"0.55\"/>\n    </filter>\n    <linearGradient id=\"blueTile\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#2e6eb8\"/><stop offset=\"100%\" stop-color=\"#173e6f\"/>\n    </linearGradient>\n    <linearGradient id=\"goldRoof\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#f3c642\"/><stop offset=\"100%\" stop-color=\"#c98c10\"/>\n    </linearGradient>\n    <linearGradient id=\"redWall\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#c83e32\"/><stop offset=\"100%\" stop-color=\"#8f241b\"/>\n    </linearGradient>\n    <linearGradient id=\"lakeBlue\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#d6eaf8\"/><stop offset=\"100%\" stop-color=\"#aed6f1\"/>\n    </linearGradient>\n    <linearGradient id=\"hillGreen\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#7fb084\"/><stop offset=\"100%\" stop-color=\"#527d58\"/>\n    </linearGradient>\n    <radialGradient id=\"marbleGrad\" cx=\"50%\" cy=\"45%\" r=\"55%\">\n      <stop offset=\"0%\" stop-color=\"#ffffff\"/><stop offset=\"100%\" stop-color=\"#e5dfd2\"/>\n    </radialGradient>\n    <marker id=\"arrowRed\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n      <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#b83227\"/>\n    </marker>\n    <marker id=\"arrowBlue\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n      <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#2e6eb8\"/>\n    </marker>\n  </defs>\n\n  <rect x=\"0\" y=\"0\" width=\"640\" height=\"865\" fill=\"#faf6ee\"/>\n  <text x=\"26\" y=\"34\" font-size=\"19\" font-weight=\"700\" fill=\"#1f1b16\">故宫（紫禁城）· 记忆宫殿路线图</text>\n  <text x=\"26\" y=\"54\" font-size=\"12\" fill=\"#6e675e\">一句话：一条中轴、前朝后寝、两翼拱卫，后三宫往西拐进「养心殿」</text>\n  \n  <g transform=\"translate(578, 34)\">\n    <circle cx=\"0\" cy=\"0\" r=\"19\" fill=\"#fff\" stroke=\"#d8cfc0\" stroke-width=\"1.2\"/>\n    <polygon points=\"0,-13 4.5,1 0,-2 -4.5,1\" fill=\"#b83227\"/>\n    <polygon points=\"0,13 4.5,1 0,3 -4.5,1\" fill=\"#b7afa1\"/>\n    <text x=\"0\" y=\"-22\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#b83227\">北</text>\n    <text x=\"-26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">西</text>\n    <text x=\"26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">东</text>\n  </g>\n\n\n  <!-- 52米筒子河 + 10米宫墙 + 四角楼 -->\n  <rect x=\"34\" y=\"74\" width=\"572\" height=\"694\" rx=\"16\" fill=\"#d6eaf8\" stroke=\"#7fb3d5\" stroke-width=\"2\"/>\n  <rect x=\"48\" y=\"88\" width=\"544\" height=\"666\" rx=\"10\" fill=\"#fbf7ee\" stroke=\"#b83227\" stroke-width=\"3\"/>\n  <!-- 四角楼金点 -->\n  <g fill=\"#f3c642\" stroke=\"#9e6d08\" stroke-width=\"1.2\">\n    <rect x=\"42\" y=\"82\" width=\"14\" height=\"14\" rx=\"2\"/>\n    <rect x=\"584\" y=\"82\" width=\"14\" height=\"14\" rx=\"2\"/>\n    <rect x=\"42\" y=\"746\" width=\"14\" height=\"14\" rx=\"2\"/>\n    <rect x=\"584\" y=\"746\" width=\"14\" height=\"14\" rx=\"2\"/>\n  </g>\n  <g class=\"map-label\" font-size=\"10\" font-weight=\"700\">\n    <text x=\"68\" y=\"104\" fill=\"#1d4e89\">护城河(筒子河 52m) · 城墙 10m · 四角楼(9梁18柱72脊)</text>\n    <rect x=\"20\" y=\"400\" width=\"22\" height=\"64\" rx=\"5\" fill=\"#b83227\"/>\n    <text x=\"31\" y=\"422\" text-anchor=\"middle\" fill=\"#fff\">西</text>\n    <text x=\"31\" y=\"436\" text-anchor=\"middle\" fill=\"#fff\">华</text>\n    <text x=\"31\" y=\"450\" text-anchor=\"middle\" fill=\"#fff\">门</text>\n    <rect x=\"598\" y=\"400\" width=\"22\" height=\"64\" rx=\"5\" fill=\"#b83227\"/>\n    <text x=\"609\" y=\"422\" text-anchor=\"middle\" fill=\"#fff\">东</text>\n    <text x=\"609\" y=\"436\" text-anchor=\"middle\" fill=\"#fff\">华</text>\n    <text x=\"609\" y=\"450\" text-anchor=\"middle\" fill=\"#fff\">门</text>\n  </g>\n\n  <!-- 前朝 / 后寝 分界线 -->\n  <line x1=\"56\" y1=\"418\" x2=\"584\" y2=\"418\" stroke=\"#b83227\" stroke-width=\"1.8\" stroke-dasharray=\"6 4\"/>\n  <g class=\"map-label\">\n    <rect x=\"498\" y=\"406\" width=\"80\" height=\"22\" rx=\"11\" fill=\"#fdf0ee\" stroke=\"#e5a9a2\"/>\n    <text x=\"538\" y=\"421\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#b83227\">前朝 / 后寝</text>\n  </g>\n\n  <!-- 中轴线动线箭头（从南午门往北神武门） -->\n  <g fill=\"none\" stroke=\"#b83227\" stroke-width=\"2.2\" stroke-dasharray=\"5 3\">\n    <line x1=\"320\" y1=\"696\" x2=\"320\" y2=\"660\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"572\" x2=\"320\" y2=\"556\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"504\" x2=\"320\" y2=\"488\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"430\" x2=\"320\" y2=\"394\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"324\" x2=\"320\" y2=\"306\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"216\" x2=\"320\" y2=\"196\" marker-end=\"url(#arrowRed)\"/>\n  </g>\n\n  <!-- 神武门（北出口） -->\n  <g class=\"map-label\">\n    <rect x=\"256\" y=\"96\" width=\"128\" height=\"24\" rx=\"6\" fill=\"#5e574e\"/>\n    <text x=\"320\" y=\"112\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">神武门（北 · 出口）</text>\n  </g>\n\n  <!-- 站 9：御花园（最北） -->\n  <g class=\"map-node\" data-step=\"9\">\n    <rect class=\"hl-ring\" x=\"218\" y=\"128\" width=\"204\" height=\"66\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"220\" y=\"130\" width=\"200\" height=\"62\" rx=\"10\" fill=\"#eef7f0\" stroke=\"#527d58\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <circle cx=\"242\" cy=\"176\" r=\"7\" fill=\"#5b8262\"/><circle cx=\"398\" cy=\"174\" r=\"8\" fill=\"#5b8262\"/>\n    <circle class=\"node-num-bg\" cx=\"234\" cy=\"144\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"234\" y=\"148\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">9</text>\n    <g class=\"map-label\">\n      <text x=\"320\" y=\"150\" text-anchor=\"middle\" font-size=\"13.5\" font-weight=\"700\" fill=\"#276749\">御花园</text>\n      <text x=\"320\" y=\"168\" text-anchor=\"middle\" font-size=\"10.2\" fill=\"#332e28\">钦安殿（真武大帝·道教）</text>\n      <text x=\"320\" y=\"183\" text-anchor=\"middle\" font-size=\"10.2\" fill=\"#276749\" font-weight=\"600\">堆秀山（重阳登高）→ 出神武门</text>\n    </g>\n  </g>\n\n  <!-- 站 7：交泰殿 & 坤宁宫（后三宫北+中） -->\n  <g class=\"map-node\" data-step=\"7\">\n    <rect class=\"hl-ring\" x=\"218\" y=\"216\" width=\"204\" height=\"88\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"220\" y=\"218\" width=\"200\" height=\"84\" rx=\"10\" fill=\"#ffffff\" stroke=\"#c89228\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <line x1=\"230\" y1=\"260\" x2=\"410\" y2=\"260\" stroke=\"#eee4cf\" stroke-width=\"1.2\"/>\n    <circle class=\"node-num-bg\" cx=\"234\" cy=\"233\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"234\" y=\"237\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">7</text>\n    <g class=\"map-label\">\n      <text x=\"326\" y=\"236\" text-anchor=\"middle\" font-size=\"12.5\" font-weight=\"700\" fill=\"#9c251c\">坤宁宫（北）</text>\n      <text x=\"326\" y=\"252\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#4f4840\">明皇后正宫 · 清萨满+东暖阁洞房</text>\n      <text x=\"320\" y=\"276\" text-anchor=\"middle\" font-size=\"12.5\" font-weight=\"700\" fill=\"#1d4e89\">交泰殿（中）</text>\n      <text x=\"320\" y=\"292\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#4f4840\">天地交泰 · 皇后受朝 · 藏 25 宝玺</text>\n    </g>\n  </g>\n\n  <!-- 站 6：乾清宫（后三宫南） -->\n  <g class=\"map-node\" data-step=\"6\">\n    <rect class=\"hl-ring\" x=\"218\" y=\"324\" width=\"204\" height=\"68\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"220\" y=\"326\" width=\"200\" height=\"64\" rx=\"10\" fill=\"#fffdf6\" stroke=\"#c83e32\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"234\" cy=\"340\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"234\" y=\"344\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">6</text>\n    <g class=\"map-label\">\n      <text x=\"326\" y=\"345\" text-anchor=\"middle\" font-size=\"13.5\" font-weight=\"700\" fill=\"#9c251c\">乾清宫（后三宫之首）</text>\n      <text x=\"320\" y=\"363\" text-anchor=\"middle\" font-size=\"10.2\" fill=\"#332e28\">明至清初皇帝寝宫与理政</text>\n      <text x=\"320\" y=\"379\" text-anchor=\"middle\" font-size=\"10.4\" font-weight=\"700\" fill=\"#1d4e89\">“正大光明”匾后 · 雍正秘密立储</text>\n    </g>\n  </g>\n\n  <!-- 站 8：养心殿（2026新增！后三宫西侧，工字形醒目红框！） -->\n  <g class=\"map-node\" data-step=\"8\">\n    <!-- 从乾清宫往西拐的蓝色箭头 -->\n    <path d=\"M 218 358 L 204 358\" fill=\"none\" stroke=\"#b83227\" stroke-width=\"2.4\" marker-end=\"url(#arrowRed)\"/>\n    <rect class=\"hl-ring\" x=\"62\" y=\"302\" width=\"142\" height=\"108\" rx=\"12\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"64\" y=\"304\" width=\"138\" height=\"104\" rx=\"11\" fill=\"#fdf0ee\" stroke=\"#b83227\" stroke-width=\"2.2\" filter=\"url(#cardShadow)\"/>\n    <!-- 工字形小剪影 -->\n    <path d=\"M 164 316 H 192 V 322 H 181 V 332 H 192 V 338 H 164 V 332 H 175 V 322 H 164 Z\" fill=\"#b83227\" opacity=\"0.22\" stroke=\"#b83227\" stroke-width=\"1\"/>\n    <circle class=\"node-num-bg\" cx=\"79\" cy=\"319\" r=\"11\" fill=\"#b83227\"/>\n    <text x=\"79\" y=\"323\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">8</text>\n    <g class=\"map-label\">\n      <text x=\"95\" y=\"323\" font-size=\"13\" font-weight=\"800\" fill=\"#9c251c\">养心殿</text>\n      <text x=\"133\" y=\"346\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"700\" fill=\"#b83227\">★ 2026 新增必讲</text>\n      <text x=\"133\" y=\"362\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#332e28\">工字形：前理政/后寝</text>\n      <text x=\"133\" y=\"377\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#1d4e89\" font-weight=\"700\">雍正起成权力心脏</text>\n      <text x=\"133\" y=\"393\" text-anchor=\"middle\" font-size=\"9.6\" fill=\"#4f4840\">东垂帘听政 · 西三希堂</text>\n    </g>\n  </g>\n\n  <!-- 站 2：整体布局（东西六宫 + 外东外西 + 前朝两翼）统一归属站2，点任意一侧都跳站2 -->\n  <g class=\"map-node\" data-step=\"2\">\n    <rect class=\"hl-ring\" x=\"62\" y=\"130\" width=\"142\" height=\"158\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"64\" y=\"132\" width=\"138\" height=\"154\" rx=\"10\" fill=\"#f6f2e8\" stroke=\"#bfb5a2\" stroke-width=\"1.3\"/>\n    <circle class=\"node-num-bg\" cx=\"78\" cy=\"147\" r=\"10\" fill=\"#6e675e\"/>\n    <text x=\"78\" y=\"151\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#fff\">2</text>\n    <g class=\"map-label\">\n      <text x=\"94\" y=\"151\" font-size=\"11.5\" font-weight=\"700\" fill=\"#23201c\">西六宫 & 外西路</text>\n      <text x=\"133\" y=\"172\" text-anchor=\"middle\" font-size=\"9.5\" fill=\"#4f4840\">永寿 · 翊坤 · 储秀</text>\n      <text x=\"133\" y=\"187\" text-anchor=\"middle\" font-size=\"9.5\" fill=\"#4f4840\">太极 · 长春 · 咸福</text>\n      <line x1=\"74\" y1=\"200\" x2=\"192\" y2=\"200\" stroke=\"#ddd5c5\"/>\n      <text x=\"133\" y=\"218\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"700\" fill=\"#1d4e89\">外西路：慈宁·寿康</text>\n      <text x=\"133\" y=\"235\" text-anchor=\"middle\" font-size=\"9.4\" fill=\"#6e675e\">（太后太妃居住）</text>\n      <text x=\"133\" y=\"264\" text-anchor=\"middle\" font-size=\"9.8\" font-weight=\"700\" fill=\"#8b5a2b\">西翼：武英殿（武）</text>\n    </g>\n\n    <rect class=\"hl-ring\" x=\"436\" y=\"130\" width=\"142\" height=\"260\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"438\" y=\"132\" width=\"138\" height=\"256\" rx=\"10\" fill=\"#f6f2e8\" stroke=\"#bfb5a2\" stroke-width=\"1.3\"/>\n    <g class=\"map-label\">\n      <text x=\"507\" y=\"154\" text-anchor=\"middle\" font-size=\"11.5\" font-weight=\"700\" fill=\"#23201c\">东六宫 & 外东路</text>\n      <text x=\"507\" y=\"176\" text-anchor=\"middle\" font-size=\"9.5\" fill=\"#4f4840\">钟粹 · 景阳 · 承乾</text>\n      <text x=\"507\" y=\"191\" text-anchor=\"middle\" font-size=\"9.5\" fill=\"#4f4840\">永和 · 景仁 · 延禧</text>\n      <line x1=\"448\" y1=\"206\" x2=\"566\" y2=\"206\" stroke=\"#ddd5c5\"/>\n      <text x=\"507\" y=\"226\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"700\" fill=\"#1d4e89\">外东路：宁寿全宫</text>\n      <text x=\"507\" y=\"244\" text-anchor=\"middle\" font-size=\"9.4\" fill=\"#6e675e\">（先帝遗孀/乾隆归政）</text>\n      <line x1=\"448\" y1=\"274\" x2=\"566\" y2=\"274\" stroke=\"#ddd5c5\"/>\n      <text x=\"507\" y=\"302\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#8b5a2b\">前朝两翼</text>\n      <text x=\"507\" y=\"324\" text-anchor=\"middle\" font-size=\"10\" fill=\"#332e28\">东：文华殿（文）</text>\n      <text x=\"507\" y=\"344\" text-anchor=\"middle\" font-size=\"10\" fill=\"#332e28\">西：武英殿（武）</text>\n      <text x=\"507\" y=\"366\" text-anchor=\"middle\" font-size=\"9.5\" fill=\"#6e675e\">一文一武拱卫中央</text>\n    </g>\n  </g>\n\n  <!-- 站 5：保和殿 -->\n  <g class=\"map-node\" data-step=\"5\">\n    <rect class=\"hl-ring\" x=\"218\" y=\"430\" width=\"204\" height=\"58\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"220\" y=\"432\" width=\"200\" height=\"54\" rx=\"10\" fill=\"#ffffff\" stroke=\"#c89228\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"234\" cy=\"447\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"234\" y=\"451\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">5</text>\n    <g class=\"map-label\">\n      <text x=\"326\" y=\"450\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"700\" fill=\"#23201c\">保和殿（重檐歇山）</text>\n      <text x=\"320\" y=\"468\" text-anchor=\"middle\" font-size=\"10\" fill=\"#1d4e89\" font-weight=\"600\">除夕宴外藩 · 殿试 · 200吨云龙石雕</text>\n    </g>\n  </g>\n\n  <!-- 站 4：中和殿 -->\n  <g class=\"map-node\" data-step=\"4\">\n    <rect class=\"hl-ring\" x=\"234\" y=\"502\" width=\"172\" height=\"52\" rx=\"10\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"236\" y=\"504\" width=\"168\" height=\"48\" rx=\"9\" fill=\"#ffffff\" stroke=\"#c89228\" stroke-width=\"1.4\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"250\" cy=\"518\" r=\"10\" fill=\"#b83227\"/>\n    <text x=\"250\" y=\"522\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#fff\">4</text>\n    <g class=\"map-label\">\n      <text x=\"326\" y=\"522\" text-anchor=\"middle\" font-size=\"12.5\" font-weight=\"700\" fill=\"#23201c\">中和殿（四角攒尖方殿）</text>\n      <text x=\"320\" y=\"540\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#5e574e\">中庸之道 · 大典前休息演礼</text>\n    </g>\n  </g>\n\n  <!-- 站 3：太和殿（金銮殿 · 视觉大主角） -->\n  <g class=\"map-node\" data-step=\"3\">\n    <rect class=\"hl-ring\" x=\"150\" y=\"570\" width=\"340\" height=\"88\" rx=\"13\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"152\" y=\"572\" width=\"336\" height=\"84\" rx=\"12\" fill=\"#fffaf0\" stroke=\"#c98c10\" stroke-width=\"2\" filter=\"url(#cardShadow)\"/>\n    <!-- 太和殿重檐庑殿金顶剪影 -->\n    <g transform=\"translate(174, 586)\">\n      <polygon points=\"10,14 22,2 82,2 94,14\" fill=\"url(#goldRoof)\" stroke=\"#8f6306\"/>\n      <polygon points=\"2,24 14,14 90,14 102,24\" fill=\"url(#goldRoof)\" stroke=\"#8f6306\"/>\n      <rect x=\"12\" y=\"24\" width=\"80\" height=\"22\" fill=\"url(#redWall)\"/>\n      <rect x=\"4\" y=\"46\" width=\"96\" height=\"6\" fill=\"#ebe4d5\" stroke=\"#b7ab96\"/>\n      <rect x=\"0\" y=\"52\" width=\"104\" height=\"6\" fill=\"#e0d8c6\" stroke=\"#b7ab96\"/>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"168\" cy=\"588\" r=\"11.5\" fill=\"#b83227\"/>\n    <text x=\"168\" y=\"592\" text-anchor=\"middle\" font-size=\"11.5\" font-weight=\"700\" fill=\"#fff\">3</text>\n    <g class=\"map-label\">\n      <text x=\"292\" y=\"594\" font-size=\"14\" font-weight=\"800\" fill=\"#9c251c\">太和殿（金銮殿 · 最高等级）</text>\n      <text x=\"292\" y=\"612\" font-size=\"10.4\" font-weight=\"700\" fill=\"#1d4e89\">重檐庑殿 · 11间 · 唯一 10 脊兽</text>\n      <text x=\"292\" y=\"629\" font-size=\"10.2\" fill=\"#332e28\">三层汉白玉台基 · 九龙宝座 · 重大典礼</text>\n      <text x=\"292\" y=\"645\" font-size=\"10\" fill=\"#6b4c00\">月台：铜龟铜鹤 + 日晷嘉量</text>\n    </g>\n  </g>\n\n  <!-- 站 1：午门（正门·南起点） + 内金水桥5座 -->\n  <g class=\"map-node\" data-step=\"1\">\n    <rect class=\"hl-ring\" x=\"150\" y=\"690\" width=\"340\" height=\"58\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"152\" y=\"692\" width=\"336\" height=\"54\" rx=\"10\" fill=\"#b83227\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"170\" cy=\"719\" r=\"11.5\" fill=\"#f3c642\"/>\n    <text x=\"170\" y=\"723\" text-anchor=\"middle\" font-size=\"11.5\" font-weight=\"800\" fill=\"#1f1b16\">1</text>\n    <g class=\"map-label\">\n      <text x=\"330\" y=\"714\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"700\" fill=\"#ffffff\">🚩 午门（故宫正门起点 · 往北走）</text>\n      <text x=\"330\" y=\"734\" text-anchor=\"middle\" font-size=\"10.5\" fill=\"#ffe6d5\">72万㎡ · 960×760m · 太和门内 5 座内金水桥</text>\n    </g>\n  </g>\n\n  <!-- 站 0：底部沿革横幅 -->\n  <g class=\"map-node\" data-step=\"0\">\n    <rect class=\"hl-ring\" x=\"32\" y=\"782\" width=\"576\" height=\"68\" rx=\"13\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"34\" y=\"784\" width=\"572\" height=\"64\" rx=\"12\" fill=\"#1d4e89\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"58\" cy=\"816\" r=\"13\" fill=\"#f3c642\"/>\n    <text x=\"58\" y=\"821\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"800\" fill=\"#1f1b16\">0</text>\n    <g class=\"map-label\">\n      <text x=\"82\" y=\"809\" font-size=\"13.5\" font-weight=\"700\" fill=\"#ffffff\">开场沿革：紫微垣+禁地 = 紫禁城 ｜ 明成祖朱棣迁都营建</text>\n      <text x=\"82\" y=\"831\" font-size=\"11.5\" fill=\"#d9e8fa\">1406 始建 → 1420 建成 ｜ 24 帝（明14清10）｜ 1925.10.10 博物院 ｜ 1987 世遗</text>\n    </g>\n  </g>\n</svg>", "stations": [{"step": 0, "chip": "0. 紫禁城沿革", "title": "开场 + 紫禁城由来与朱棣迁都", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "紫微垣（天帝居所）+ 禁地 = 紫禁城"}, {"text": "1406 始建 · 1420 建成（明成祖朱棣）"}, {"text": "迁都：燕王根基 + 控边防 + 脱南京旧势力"}, {"text": "24 帝 · 1925.10.10 博物院 · 1987 世遗"}], "shortOral": "各位朋友大家好，欢迎来到世界最大、最完整的木结构宫殿群——<b>故宫博物院</b>。先说名字“<b>紫禁城</b>”：“紫”指天上天帝住的<b>紫微垣</b>，“禁”指皇家禁地，合起来就是天子的禁宫。它由<b>明成祖朱棣</b>在<b>1406年</b>（永乐四年）始建、<b>1420年</b>建成。朱棣迁都北京，一因为他是燕王起家根基在北方，二为了巩固边防，三为了摆脱南京旧势力牵绊。明清共住过<b>24位皇帝</b>（明14清10），<b>1925年10月10日</b>成立故宫博物院对百姓开放，<b>1987年</b>列入世界文化遗产。", "fullText": "各位游客朋友们，大家好！欢迎来到故宫博物院。我是今天的导游，接下来这两个小时，咱们一起走进这座六百多年的皇家宫殿。\n\n进门前，先把名字说清楚。这里旧称紫禁城。紫，取自天上的紫微垣，那是天帝居住的地方，皇帝自称天子，地上的宫城便对应天上的紫微垣；禁，是说这里是皇家禁地，守卫森严，寻常百姓不得擅入。两个合起来，就是紫禁城。\n\n它始建于明永乐四年，永乐十八年基本建成，是明成祖朱棣下令营建的。朱棣为什么要迁都北京？他是燕王出身，根基在北方；迁都既能巩固北方边防、控制东北，也能摆脱南京旧势力的牵绊。清代入关后继续把这里当作皇宫，先后有二十四位皇帝在此理政和生活。一九二五年十月十日，故宫博物院正式成立，昔日的禁城才第一次向普通百姓打开大门。一九八七年，故宫被列入世界文化遗产名录。"}, {"step": 1, "chip": "1. 午门与四至数字", "title": "午门进宫 + 整体硬数字（城墙/河/角楼/四门）", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "故宫正门是午门（≠ 天安门）", "danger": true}, {"text": "72 万㎡ · 南北 960 × 东西 760 米"}, {"text": "城墙 10 米 · 筒子河 52 米 · 角楼 9梁18柱72脊"}, {"text": "四门：南午门、北神武、东华、西华 · 内金水桥 5 座"}], "shortOral": "咱们现在跨进<b>午门</b>——提醒一句，<b>午门才是故宫正门</b>，天安门是皇城正门。进门先装下整体数字：占地<b>72万平方米</b>，南北长<b>960米</b>、东西宽<b>760米</b>，外围是<b>10米高城墙</b>和<b>52米宽护城河（筒子河）</b>，四角各有一座精巧的<b>角楼</b>（俗称九梁十八柱七十二条脊）。紫禁城四座门：南<b>午门</b>、北<b>神武门</b>、东<b>东华门</b>、西<b>西华门</b>，相传有九千九百九十九间半房（讲时一定加“相传”），太和门内还有<b>5座内金水桥</b>。", "fullText": "咱们现在从午门进来。先把整体格局记在脑子里：故宫占地约七十二万平方米，南北长约九百六十米，东西宽约七百六十米，四周是十米高的城墙和五十二米宽的护城河，也就是筒子河。四角各有一座玲珑的角楼，民间说它九梁十八柱七十二条脊，是木构建筑里最精巧的作品之一。紫禁城有四座门：南面咱们进来的午门是正门，北面神武门是出口，东西两侧是东华门和西华门。"}, {"step": 2, "chip": "2. 前朝后寝与两翼六宫", "title": "整体布局（前朝后寝 · 两翼 · 东西六宫 · 外东外西）", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "前朝（三大殿办公）+ 后寝（后三宫居住）"}, {"text": "前朝两翼：东文华殿、西武英殿（左文右武）"}, {"text": "东六宫：钟粹/景阳/承乾/永和/景仁/延禧"}, {"text": "西六宫：永寿/翊坤/储秀/太极/长春/咸福 · 外东宁寿/外西慈宁寿康"}], "shortOral": "记住八个字逛故宫绝不迷路：<b>一条中轴、前朝后寝</b>。前半段外朝办公（太和门、三大殿），后半段内廷住人（后三宫、御花园）。外朝左右两翼是<b>东文华殿、西武英殿</b>，一文一武拱卫中央；内廷两侧是妃嫔住的<b>东西六宫</b>——东六宫是<b>钟粹、景阳、承乾、永和、景仁、延禧</b>，西六宫是<b>永寿、翊坤、储秀、太极、长春、咸福</b>。再往外，<b>外东路</b>是宁寿全宫，<b>外西路</b>是太后太妃住的慈宁宫、寿康宫一带。", "fullText": "整个宫城沿一条南北中轴线展开，布局叫前朝后寝。前半部分是皇帝举行大典、处理朝政的外朝，后半部分是帝后妃嫔居住的内廷。中轴线上，从南往北依次是太和门、太和殿、中和殿、保和殿，再往后是乾清宫、交泰殿、坤宁宫，最后是御花园。外朝两翼，东边文华殿、西边武英殿，一文一武拱卫中央；内廷两侧是东西六宫，东六宫是钟粹宫、景阳宫、承乾宫、永和宫、景仁宫、延禧宫，西六宫是永寿宫、翊坤宫、储秀宫、太极殿、长春宫、咸福宫。再往外，东路有先帝遗孀居住的宁寿全宫，也就是外东路；西路有慈宁宫、寿康宫一带，称外西路。您记住一条中轴、两翼拱卫、东西六宫，故宫就不会走丢。"}, {"step": 3, "chip": "3. 太和殿", "title": "太和殿（金銮殿 · 最高等级与陈设）", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "重檐庑殿顶 · 面阔 11 间 · 进深 5 间 · 三层汉白玉台基"}, {"text": "唯一 10 个脊兽（多一个“行什”）"}, {"text": "用途：登基、大婚、册后、命将出征"}, {"text": "殿内九龙宝座 · 殿外铜龟铜鹤+日晷嘉量"}], "shortOral": "现在站到前朝老大——俗称金銮殿的<b>太和殿</b>前。它是中国古建筑等级的天花板：建在<b>三层汉白玉台基</b>上，<b>重檐庑殿顶</b>、面阔<b>11间</b>，屋檐上蹲着全国唯一的<b>10个脊兽</b>（多一个行什）。皇帝登基、大婚、出征等最重大典礼都在这儿办。殿里摆着<b>九龙宝座</b>，殿外月台陈设<b>铜龟、铜鹤</b>寓意江山万代，<b>日晷、嘉量</b>象征统一时间与度量，合起来就是天下一统。", "fullText": "好，现在咱们站在太和殿广场。眼前这座建在三层汉白玉台基上的大殿，就是俗称金銮殿的太和殿。它是中国古建筑等级最高的形制，重檐庑殿顶，黄琉璃瓦，殿内设九龙宝座，是皇帝登基、大婚、册立皇后、命将出征等最重大典礼的场所。殿外平台上陈设着铜龟、铜鹤、日晷和嘉量，龟鹤象征江山万代，日晷嘉量代表统一时间与度量，合起来就是江山永固、天下一统。"}, {"step": 4, "chip": "4. 中和殿", "title": "中和殿（四角攒尖 · 大典前休息室）", "time": "约 0.5 分钟", "isNew": false, "anchors": [{"text": "四角攒尖顶方形殿"}, {"text": "取义“中庸之道”"}, {"text": "用途：大典前短暂休息、演练礼仪、阅祝文"}], "shortOral": "往北走是小巧精致的<b>中和殿</b>，它是<b>四角攒尖顶</b>的方形大殿，名字取儒家“<b>中庸之道</b>”。说白了就是皇帝去太和殿开大会前的“贵宾休息室”，大典前在这儿歇脚、接受内大臣朝拜、演练礼仪。", "fullText": "往后是中和殿，四角攒尖顶的方形殿宇，名字取中庸之道，是皇帝去太和殿大典前短暂休息、演练礼仪的地方。"}, {"step": 5, "chip": "5. 保和殿", "title": "保和殿（宴外藩 · 殿试 · 200 吨云龙石雕）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "重檐歇山顶"}, {"text": "用途：清代除夕宴外藩 + 科举殿试"}, {"text": "殿后云龙石雕：整石 200 余吨，冬日泼水冰道拖运"}], "shortOral": "前朝最后一座是<b>保和殿</b>，<b>重檐歇山顶</b>。清代每年两大名场面在这儿：一是<b>除夕赐宴蒙古王公外藩</b>，二是全国学霸争状元的<b>殿试</b>！出保和殿往北看脚下台阶中间，那块<b>200多吨的整块云龙大石雕</b>，当年冬天一路打井泼水结冰、用旱船硬生生拉进京，堪称古代工程奇迹。", "fullText": "再往后是保和殿，重檐歇山顶，清代每年除夕赐宴外藩、举行殿试都在这里。它后面那块巨大的云龙石雕，由一整块巨石雕成，重达两百多吨，当年靠冬天沿途泼水结冰、用旱船拖运进京，本身就是一项工程奇迹。"}, {"step": 6, "chip": "6. 乾清宫", "title": "乾清宫（明至清初寝宫 · 正大光明秘密立储）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "过乾清门进内廷 · 后三宫之首"}, {"text": "明至清初皇帝寝宫与日常理政"}, {"text": "高悬“正大光明”匾 · 雍正起秘密立储"}], "shortOral": "穿过乾清门，咱们就跨进皇帝的家——内廷后三宫。正前方是<b>乾清宫</b>，明朝到清朝顺治康熙都是皇帝睡觉和日常办公的地方。抬头看殿里高悬的“<b>正大光明</b>”匾，从<b>雍正</b>皇帝开始，为了防止皇子争位，立太子的密诏就藏在这块匾后面，这就是有名的<b>秘密立储制度</b>。", "fullText": "穿过保和殿，就进了内廷。正前方是乾清宫，明代到清初是皇帝的寝宫和日常理政之处，殿内高悬正大光明匾，自雍正起，秘密立储的传位诏书就藏在匾后。"}, {"step": 7, "chip": "7. 交泰殿 & 坤宁宫", "title": "交泰殿（25 宝玺）+ 坤宁宫（萨满与大婚洞房）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "交泰殿：天地交泰 · 皇后受朝贺 · 藏 25 方宝玺"}, {"text": "坤宁宫：明为皇后正宫 · 清改萨满祭祀"}, {"text": "坤宁宫东暖阁：清代皇帝大婚洞房"}], "shortOral": "乾清宫往北是夹在中间的<b>交泰殿</b>，取“天地交泰、阴阳和合”之意，皇后重大节庆在这儿接受朝贺，殿里还珍藏着代表皇权的<b>25方宝玺</b>。再往北是<b>坤宁宫</b>，明朝是皇后的正宫寝殿；清朝入关后按满族习俗大部分改作<b>萨满教祭祀</b>的场所，只把<b>东暖阁</b>留作清代皇帝大婚的洞房。", "fullText": "中间的交泰殿，取天地交泰、阴阳和合之意，是皇后在重大节庆接受朝贺的地方，殿内收藏着二十五方宝玺。再往后是坤宁宫，明代是皇后的正宫，清代主要改作萨满教祭祀的场所，东暖阁则作为皇帝大婚的洞房。"}, {"step": 8, "chip": "8. 养心殿（2026新增）", "title": "养心殿（工字形 · 清代权力心脏 · 三希堂）", "time": "约 1.5 分钟", "isNew": true, "anchors": [{"text": "不在中轴！在后三宫西侧（2026 新增必讲！）", "danger": true}, {"text": "工字形平面：前殿理政 + 后殿寝宫"}, {"text": "明嘉靖始建 · 雍正起取代乾清宫成权力中心"}, {"text": "东暖阁：垂帘听政 · 西暖阁：乾隆三希堂"}], "shortOral": "注意！这站咱们要从后三宫<b>往西拐</b>，来到清代紫禁城真正的权力心脏——<b>养心殿</b>。它始建于明嘉靖年间，平面像个“<b>工</b>”字：<b>前殿办公召见大臣，后殿当寝宫睡觉</b>。从<b>雍正</b>开始，皇帝嫌乾清宫太空旷，搬到养心殿既住又办公，清朝八位皇帝都在这儿批奏折！里面有两个传奇房间：<b>东暖阁</b>是晚清慈禧<b>垂帘听政</b>的地方，<b>西暖阁</b>藏着乾隆最爱的小书房<b>三希堂</b>（收藏三件晋代法帖）。", "fullText": "从后三宫往西走，咱们到养心殿。这一组建筑平面呈工字形，前殿是皇帝日常理政、召见大臣的地方，后殿是寝宫，始建于明代嘉靖年间。自雍正以后，养心殿取代乾清宫，成为皇帝实际上的居住和办公中心，清代许多重大决策都出自这里。东暖阁是晚清垂帘听政的地方，西暖阁里有一间小小的书房，就是乾隆皇帝最珍爱的三希堂，因收藏三件晋人法帖而得名。可以说，读懂养心殿，就读懂了清代紫禁城的权力心脏。"}, {"step": 9, "chip": "9. 御花园与收尾", "title": "御花园（钦安殿 · 堆秀山）+ 出神武门收尾", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "中轴线最北 · 亭台奇石古柏错落"}, {"text": "钦安殿：供奉真武大帝（道教祭祀中心）"}, {"text": "堆秀山：重阳节帝后登高望远"}, {"text": "出神武门收尾 · 1987 世遗 · 礼制与秩序"}], "shortOral": "最后一站来到中轴最北端的<b>御花园</b>。它虽然不大但极其精巧，亭台奇石古柏样样俱全：中轴正中的<b>钦安殿</b>供奉<b>真武大帝</b>，是宫里道教祭祀中心；北边那座假山叫<b>堆秀山</b>，是皇帝皇后重阳节登高望远的地方。走出北面的<b>神武门</b>，这条中轴线就走完了。\n各位朋友，故宫的一砖一瓦写满礼制与秩序：中轴居中、前朝后寝、九五之尊。1987年它成为首批世界文化遗产，我的讲解到此结束，谢谢大家！", "fullText": "最后一站是御花园。它不大，但布局精巧，亭台、奇石、古柏、盆景错落有致。中轴线上的钦安殿供奉真武大帝，是宫中道教祭祀的中心；园北的堆秀山，是帝后重阳节登高望远处。走到神武门，咱们这条中轴线就算走完了。\n\n各位朋友，故宫的一砖一瓦，写的都是礼制与秩序：中轴居中，前朝后寝，左文右武，九五之尊。希望今天这一趟，能让您不只是看见金碧辉煌，也看见它背后那套规矩。我的讲解到此结束，谢谢大家！"}], "audios": ["audio/gugong/step_0.mp3", "audio/gugong/step_1.mp3", "audio/gugong/step_2.mp3", "audio/gugong/step_3.mp3", "audio/gugong/step_4.mp3", "audio/gugong/step_5.mp3", "audio/gugong/step_6.mp3", "audio/gugong/step_7.mp3", "audio/gugong/step_8.mp3", "audio/gugong/step_9.mp3"]}, {"id": "tiantan", "name": "天坛", "short_name": "3. 天坛", "badge": "2026 题签重组", "slogan": "北圆南方（天圆地方）｜ 南圜丘冬至祭天 → 丹陛桥 → 北祈年正月祈谷", "ticket_html": "<strong>三、天坛：</strong>天坛的历史沿革（朱棣、嘉靖、乾隆分别对天坛的建造和改造）；天坛的位置及布局特点；祈谷坛建筑群（祈年殿、祈谷坛、皇乾殿、供菜廊的建筑特点、陈设及作用）；圜丘坛建筑群（圜丘坛的建筑特点及附属设施，皇穹宇的建筑布局及殿内陈设，建筑群区域内的声学现象，祭天大典九项仪程）；列入世界文化遗产的时间。", "svg": "<svg class=\"spot-map-svg\" viewBox=\"0 0 640 865\" xmlns=\"http://www.w3.org/2000/svg\">\n        <defs>\n          <!-- 柔软阴影 -->\n          <filter id=\"cardShadow\" x=\"-10%\" y=\"-10%\" width=\"120%\" height=\"125%\">\n            <feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"2.5\" flood-color=\"#2c2419\" flood-opacity=\"0.10\"/>\n          </filter>\n          <!-- 激活高亮光晕 -->\n          <filter id=\"activeGlow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">\n            <feDropShadow dx=\"0\" dy=\"0\" stdDeviation=\"4.5\" flood-color=\"#1d4e89\" flood-opacity=\"0.45\"/>\n          </filter>\n          <!-- 蓝瓦渐变 -->\n          <linearGradient id=\"blueTile\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n            <stop offset=\"0%\" stop-color=\"#2e6eb8\"/>\n            <stop offset=\"100%\" stop-color=\"#173e6f\"/>\n          </linearGradient>\n          <!-- 汉白玉圆台渐变 -->\n          <radialGradient id=\"marbleGrad\" cx=\"50%\" cy=\"45%\" r=\"55%\">\n            <stop offset=\"0%\" stop-color=\"#ffffff\"/>\n            <stop offset=\"100%\" stop-color=\"#e5dfd2\"/>\n          </radialGradient>\n          <!-- 红色动线箭头 -->\n          <marker id=\"arrowRed\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n            <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#b83227\"/>\n          </marker>\n          <marker id=\"arrowBlue\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n            <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#2e6eb8\"/>\n          </marker>\n        </defs>\n\n        <!-- 宣纸底色 -->\n        <rect x=\"0\" y=\"0\" width=\"640\" height=\"865\" fill=\"#faf6ee\"/>\n\n        <!-- 顶部图名与指南针 -->\n        <text x=\"26\" y=\"34\" font-size=\"19\" font-weight=\"700\" fill=\"#1f1b16\">天坛 · 记忆宫殿路线图</text>\n        <text x=\"26\" y=\"54\" font-size=\"12\" fill=\"#6e675e\">一句话：北圆南方（天圆地方）｜ 南圜丘冬至祭天 → 丹陛桥 → 北祈年正月祈谷</text>\n\n        <!-- 指北针 -->\n        <g transform=\"translate(578, 34)\">\n          <circle cx=\"0\" cy=\"0\" r=\"19\" fill=\"#fff\" stroke=\"#d8cfc0\" stroke-width=\"1.2\"/>\n          <polygon points=\"0,-13 4.5,1 0,-2 -4.5,1\" fill=\"#b83227\"/>\n          <polygon points=\"0,13 4.5,1 0,3 -4.5,1\" fill=\"#b7afa1\"/>\n          <text x=\"0\" y=\"-22\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#b83227\">北</text>\n          <text x=\"-26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">西</text>\n          <text x=\"26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">东</text>\n        </g>\n\n        <!-- 外坛墙（北圆南方：天圆地方） -->\n        <path d=\"M 32 768 L 32 252 A 288 158 0 0 1 608 252 L 608 768 Z\"\n              fill=\"#f3efe5\" stroke=\"#a69b89\" stroke-width=\"2.2\"/>\n        <!-- 外坛墙标注 -->\n        <g class=\"map-label\">\n          <rect x=\"218\" y=\"82\" width=\"204\" height=\"24\" rx=\"12\" fill=\"#1d4e89\"/>\n          <text x=\"320\" y=\"98\" text-anchor=\"middle\" font-size=\"11.5\" font-weight=\"700\" fill=\"#ffffff\">北圆（天）· 南方（地）= 天圆地方</text>\n          <text x=\"32\" y=\"122\" font-size=\"11\" fill=\"#7c7366\">外坛墙（273公顷 ≈ 4个故宫）</text>\n        </g>\n\n        <!-- 古柏点缀（营造坛庙画面感） -->\n        <g fill=\"#5b8262\" opacity=\"0.55\">\n          <circle cx=\"62\" cy=\"435\" r=\"10\"/><circle cx=\"75\" cy=\"442\" r=\"8\"/><circle cx=\"55\" cy=\"447\" r=\"7\"/>\n          <circle cx=\"88\" cy=\"560\" r=\"11\"/><circle cx=\"102\" cy=\"568\" r=\"8\"/><circle cx=\"76\" cy=\"572\" r=\"8\"/>\n          <circle cx=\"78\" cy=\"690\" r=\"10\"/><circle cx=\"92\" cy=\"697\" r=\"7\"/>\n          <circle cx=\"585\" cy=\"360\" r=\"9\"/><circle cx=\"582\" cy=\"520\" r=\"10\"/><circle cx=\"584\" cy=\"660\" r=\"9\"/>\n        </g>\n\n        <!-- 内坛墙（北圆南方红褐虚线） -->\n        <path d=\"M 154 748 L 154 274 A 206 122 0 0 1 566 274 L 566 748 Z\"\n              fill=\"#fbf8f1\" stroke=\"#b86b5e\" stroke-width=\"1.8\" stroke-dasharray=\"6 4\"/>\n        <text x=\"166\" y=\"192\" font-size=\"10.5\" fill=\"#a05549\" class=\"map-label\">内坛墙</text>\n\n        <!-- 动线连接箭头（从南向北主轴） -->\n        <g fill=\"none\" stroke=\"#b83227\" stroke-width=\"2.2\" stroke-dasharray=\"5 3\">\n          <!-- 昭亨门 -> 圜丘 -->\n          <line x1=\"360\" y1=\"734\" x2=\"360\" y2=\"718\" marker-end=\"url(#arrowRed)\"/>\n          <!-- 圜丘 -> 皇穹宇 -->\n          <line x1=\"360\" y1=\"630\" x2=\"360\" y2=\"616\" marker-end=\"url(#arrowRed)\"/>\n          <!-- 皇穹宇 -> 丹陛桥 -->\n          <line x1=\"360\" y1=\"504\" x2=\"360\" y2=\"492\" marker-end=\"url(#arrowRed)\"/>\n          <!-- 丹陛桥 -> 祈年门 -> 祈年殿 -->\n          <line x1=\"360\" y1=\"402\" x2=\"360\" y2=\"394\"/>\n          <line x1=\"360\" y1=\"370\" x2=\"360\" y2=\"362\" marker-end=\"url(#arrowRed)\"/>\n          <!-- 祈年殿 -> 皇乾殿 -->\n          <line x1=\"360\" y1=\"244\" x2=\"360\" y2=\"232\" marker-end=\"url(#arrowRed)\"/>\n        </g>\n\n        <!-- ========== 站 1：位置与布局（可点中轴外缘提示区） ========== -->\n        <g class=\"map-node\" data-step=\"1\">\n          <rect class=\"hl-ring\" x=\"40\" y=\"164\" width=\"102\" height=\"58\" rx=\"10\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n          <rect x=\"42\" y=\"166\" width=\"98\" height=\"54\" rx=\"9\" fill=\"#ffffff\" stroke=\"#d5cbb8\" stroke-width=\"1.2\" filter=\"url(#cardShadow)\"/>\n          <circle class=\"node-num-bg\" cx=\"56\" cy=\"180\" r=\"10\" fill=\"#b83227\"/>\n          <text x=\"56\" y=\"184\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">1</text>\n          <g class=\"map-label\">\n            <text x=\"72\" y=\"184\" font-size=\"11.5\" font-weight=\"700\" fill=\"#23201c\">位置布局</text>\n            <text x=\"50\" y=\"201\" font-size=\"10\" fill=\"#5e574e\">中轴南端东侧</text>\n            <text x=\"50\" y=\"214\" font-size=\"10\" fill=\"#1d4e89\" font-weight=\"600\">273公顷·4故宫</text>\n          </g>\n        </g>\n\n        <!-- ========== 站 7：皇乾殿（祈年殿北） ========== -->\n        <g class=\"map-node\" data-step=\"7\">\n          <rect class=\"hl-ring\" x=\"272\" y=\"170\" width=\"176\" height=\"58\" rx=\"12\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n          <!-- 歇山蓝瓦屋顶剪影 -->\n          <rect x=\"276\" y=\"174\" width=\"168\" height=\"50\" rx=\"10\" fill=\"#ffffff\" stroke=\"#2e6eb8\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n          <polygon points=\"292,193 306,181 334,181 348,193\" fill=\"url(#blueTile)\"/>\n          <rect x=\"300\" y=\"193\" width=\"40\" height=\"19\" fill=\"#c04b3d\"/>\n          <rect x=\"315\" y=\"199\" width=\"10\" height=\"13\" fill=\"#702218\"/>\n          <circle class=\"node-num-bg\" cx=\"288\" cy=\"186\" r=\"10.5\" fill=\"#b83227\"/>\n          <text x=\"288\" y=\"190\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">7</text>\n          <g class=\"map-label\">\n            <text x=\"356\" y=\"194\" font-size=\"13\" font-weight=\"700\" fill=\"#1f1b16\">皇乾殿</text>\n            <text x=\"356\" y=\"211\" font-size=\"10.5\" fill=\"#1d4e89\" font-weight=\"600\">祈谷神牌库房</text>\n          </g>\n        </g>\n\n        <!-- ========== 站 8：供菜廊 / 七十二长廊（西北侧·西） ========== -->\n        <g class=\"map-node\" data-step=\"8\">\n          <rect class=\"hl-ring\" x=\"42\" y=\"238\" width=\"104\" height=\"136\" rx=\"12\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n          <!-- 封闭长廊连接虚线指向祈年殿 -->\n          <path d=\"M 146 304 L 294 304\" fill=\"none\" stroke=\"#2e6eb8\" stroke-width=\"2.4\" stroke-dasharray=\"6 3\" marker-end=\"url(#arrowBlue)\"/>\n          <rect x=\"172\" y=\"292\" width=\"96\" height=\"20\" rx=\"10\" fill=\"#e8f1fb\" stroke=\"#b9d2ef\" class=\"map-label\"/>\n          <text x=\"220\" y=\"306\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"600\" fill=\"#1d4e89\" class=\"map-label\">封闭运送贡品 →</text>\n\n          <rect x=\"44\" y=\"240\" width=\"100\" height=\"132\" rx=\"10\" fill=\"#ffffff\" stroke=\"#8a7962\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n          <!-- 迷你封闭廊剪影 -->\n          <polygon points=\"56,282 132,282 126,271 62,271\" fill=\"#4f6d8a\"/>\n          <rect x=\"60\" y=\"282\" width=\"68\" height=\"16\" fill=\"#ebe3d5\" stroke=\"#8a7962\"/>\n          <line x1=\"74\" y1=\"282\" x2=\"74\" y2=\"298\" stroke=\"#b83227\" stroke-width=\"2\"/>\n          <line x1=\"94\" y1=\"282\" x2=\"94\" y2=\"298\" stroke=\"#b83227\" stroke-width=\"2\"/>\n          <line x1=\"114\" y1=\"282\" x2=\"114\" y2=\"298\" stroke=\"#b83227\" stroke-width=\"2\"/>\n          <circle class=\"node-num-bg\" cx=\"58\" cy=\"255\" r=\"10.5\" fill=\"#b83227\"/>\n          <text x=\"58\" y=\"259\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">8</text>\n          <g class=\"map-label\">\n            <text x=\"74\" y=\"259\" font-size=\"12\" font-weight=\"700\" fill=\"#23201c\">供菜廊</text>\n            <text x=\"94\" y=\"315\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"600\" fill=\"#1d4e89\">七十二长廊</text>\n            <text x=\"94\" y=\"331\" text-anchor=\"middle\" font-size=\"10\" fill=\"#5e574e\">神厨 · 宰牲亭</text>\n            <text x=\"94\" y=\"346\" text-anchor=\"middle\" font-size=\"10\" fill=\"#5e574e\">祈年门 · 七星石</text>\n            <text x=\"94\" y=\"362\" text-anchor=\"middle\" font-size=\"9.5\" fill=\"#b83227\" font-weight=\"600\">2026 必讲点</text>\n          </g>\n        </g>\n\n        <!-- ========== 站 6：祈年殿（核心视觉主角） ========== -->\n        <g class=\"map-node\" data-step=\"6\">\n          <circle class=\"hl-ring\" cx=\"360\" cy=\"304\" r=\"62\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"4\" filter=\"url(#activeGlow)\"/>\n          <!-- 三层汉白玉圆形台基 -->\n          <circle cx=\"360\" cy=\"304\" r=\"56\" fill=\"url(#marbleGrad)\" stroke=\"#c7beb0\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n          <circle cx=\"360\" cy=\"304\" r=\"46\" fill=\"#f7f4ed\" stroke=\"#d1c8b9\" stroke-width=\"1\"/>\n          <!-- 蓝瓦三重檐圆形攒尖剪影 -->\n          <circle cx=\"360\" cy=\"304\" r=\"36\" fill=\"url(#blueTile)\" stroke=\"#123055\" stroke-width=\"1.5\"/>\n          <circle cx=\"360\" cy=\"304\" r=\"24\" fill=\"#2964a8\" stroke=\"#85b5e8\" stroke-width=\"1\"/>\n          <circle cx=\"360\" cy=\"304\" r=\"13\" fill=\"#3a7bc8\" stroke=\"#b6d6f6\" stroke-width=\"1\"/>\n          <!-- 鎏金宝顶 -->\n          <circle cx=\"360\" cy=\"304\" r=\"5.5\" fill=\"#f0c43d\" stroke=\"#997005\" stroke-width=\"1\"/>\n          <!-- 编号 -->\n          <circle class=\"node-num-bg\" cx=\"310\" cy=\"264\" r=\"12\" fill=\"#b83227\"/>\n          <text x=\"310\" y=\"268\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#fff\">6</text>\n\n          <!-- 右侧清晰说明卡（绝不压圆、绝不压内坛墙） -->\n          <g class=\"map-label\">\n            <rect x=\"428\" y=\"256\" width=\"128\" height=\"96\" rx=\"10\" fill=\"#ffffff\" stroke=\"#2e6eb8\" stroke-width=\"1.4\" filter=\"url(#cardShadow)\"/>\n            <text x=\"438\" y=\"276\" font-size=\"14\" font-weight=\"700\" fill=\"#1d4e89\">祈年殿</text>\n            <rect x=\"438\" y=\"283\" width=\"108\" height=\"19\" rx=\"5\" fill=\"#fdf0ee\"/>\n            <text x=\"492\" y=\"296\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#b83227\">正月祈谷 · 非祭天</text>\n            <text x=\"438\" y=\"317\" font-size=\"10.5\" fill=\"#332e28\">蓝瓦三重檐金顶</text>\n            <text x=\"438\" y=\"333\" font-size=\"10.5\" font-weight=\"700\" fill=\"#1d4e89\">28柱 = 4季+12月+12时</text>\n            <text x=\"438\" y=\"346\" font-size=\"9.5\" fill=\"#6e675e\">（24节气 + 28星宿）</text>\n          </g>\n        </g>\n\n        <!-- 祈年门过渡标志 -->\n        <g class=\"map-label\">\n          <rect x=\"328\" y=\"370\" width=\"64\" height=\"22\" rx=\"5\" fill=\"#ede7da\" stroke=\"#bfb5a2\"/>\n          <text x=\"360\" y=\"385\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"600\" fill=\"#544d43\">祈年门</text>\n        </g>\n\n        <!-- ========== 站 5：丹陛桥（360米高台甬道） ========== -->\n        <g class=\"map-node\" data-step=\"5\">\n          <rect class=\"hl-ring\" x=\"323\" y=\"400\" width=\"74\" height=\"94\" rx=\"8\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n          <!-- 三道清晰石板路：西王 / 中神 / 东御 -->\n          <rect x=\"326\" y=\"403\" width=\"68\" height=\"88\" rx=\"5\" fill=\"#e8e2d5\" stroke=\"#a69b89\" stroke-width=\"1.2\" filter=\"url(#cardShadow)\"/>\n          <rect x=\"330\" y=\"406\" width=\"16\" height=\"82\" fill=\"#d8d1c3\"/>\n          <rect x=\"350\" y=\"406\" width=\"20\" height=\"82\" fill=\"#d67c6b\"/>\n          <rect x=\"374\" y=\"406\" width=\"16\" height=\"82\" fill=\"#e6c87a\"/>\n          <g class=\"map-label\" font-size=\"9.5\" font-weight=\"700\" text-anchor=\"middle\">\n            <text x=\"338\" y=\"450\" fill=\"#5a534a\">王</text>\n            <text x=\"360\" y=\"450\" fill=\"#ffffff\">神</text>\n            <text x=\"382\" y=\"450\" fill=\"#6b4c00\">御</text>\n          </g>\n          <circle class=\"node-num-bg\" cx=\"315\" cy=\"415\" r=\"11\" fill=\"#b83227\"/>\n          <text x=\"315\" y=\"419\" text-anchor=\"middle\" font-size=\"11.5\" font-weight=\"700\" fill=\"#fff\">5</text>\n\n          <!-- 右侧丹陛桥说明卡 -->\n          <g class=\"map-label\">\n            <rect x=\"408\" y=\"412\" width=\"148\" height=\"72\" rx=\"10\" fill=\"#ffffff\" stroke=\"#d5cbb8\" stroke-width=\"1.3\" filter=\"url(#cardShadow)\"/>\n            <text x=\"418\" y=\"431\" font-size=\"13\" font-weight=\"700\" fill=\"#23201c\">丹陛桥 · 360米</text>\n            <text x=\"418\" y=\"448\" font-size=\"10.5\" font-weight=\"700\" fill=\"#b83227\">高台甬道，不是桥！</text>\n            <text x=\"418\" y=\"464\" font-size=\"10\" fill=\"#4f4840\">中神道 · 东御道(帝) · 西王道</text>\n            <text x=\"418\" y=\"477\" font-size=\"9.5\" fill=\"#6e675e\">步步登天：连接祭天与祈谷</text>\n          </g>\n        </g>\n\n        <!-- ========== 站 4：皇穹宇 + 回音壁 + 三音石（左西右东绝对正确！） ========== -->\n        <g class=\"map-node\" data-step=\"4\">\n          <ellipse class=\"hl-ring\" cx=\"360\" cy=\"560\" rx=\"102\" ry=\"59\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n          <!-- 圆形回音壁围墙 -->\n          <ellipse cx=\"360\" cy=\"560\" rx=\"96\" ry=\"54\" fill=\"#ffffff\" stroke=\"#4f6d8a\" stroke-width=\"3.2\" filter=\"url(#cardShadow)\"/>\n          <!-- 金色声波反射弧线（可视化记忆回音壁！） -->\n          <path d=\"M 288 538 Q 360 515 432 538\" fill=\"none\" stroke=\"#d99a1e\" stroke-width=\"2\" stroke-dasharray=\"4 3\"/>\n          <g class=\"map-label\">\n            <rect x=\"292\" y=\"497\" width=\"136\" height=\"19\" rx=\"9.5\" fill=\"#fdf7e3\" stroke=\"#e4cb85\" stroke-width=\"1\"/>\n            <text x=\"360\" y=\"510\" text-anchor=\"middle\" font-size=\"9.8\" font-weight=\"700\" fill=\"#9c6500\">圆形围墙 = 回音壁</text>\n          </g>\n\n          <!-- 西配殿（左侧=西，彻底修正旧图错误！） -->\n          <rect x=\"275\" y=\"544\" width=\"38\" height=\"32\" rx=\"5\" fill=\"#ede7da\" stroke=\"#998f7e\"/>\n          <text x=\"294\" y=\"564\" text-anchor=\"middle\" font-size=\"9.5\" font-weight=\"600\" fill=\"#4a443b\" class=\"map-label\">西配殿</text>\n\n          <!-- 东配殿（右侧=东，彻底修正旧图错误！） -->\n          <rect x=\"407\" y=\"544\" width=\"38\" height=\"32\" rx=\"5\" fill=\"#ede7da\" stroke=\"#998f7e\"/>\n          <text x=\"426\" y=\"564\" text-anchor=\"middle\" font-size=\"9.5\" font-weight=\"600\" fill=\"#4a443b\" class=\"map-label\">东配殿</text>\n\n          <!-- 中心单檐蓝瓦圆殿：皇穹宇 -->\n          <circle cx=\"360\" cy=\"558\" r=\"24\" fill=\"url(#blueTile)\" stroke=\"#123055\" stroke-width=\"1.4\"/>\n          <circle cx=\"360\" cy=\"551\" r=\"4\" fill=\"#f0c43d\"/>\n          <text x=\"360\" y=\"571\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#fff\" class=\"map-label\">皇穹宇</text>\n\n          <!-- 殿前御路三音石（3块小石点） -->\n          <rect x=\"348\" y=\"586\" width=\"24\" height=\"22\" fill=\"#f0ebe0\"/>\n          <circle cx=\"360\" cy=\"591\" r=\"2.6\" fill=\"#b83227\"/>\n          <circle cx=\"360\" cy=\"598\" r=\"2.6\" fill=\"#b83227\"/>\n          <circle cx=\"360\" cy=\"605\" r=\"2.6\" fill=\"#b83227\"/>\n          <text x=\"376\" y=\"601\" font-size=\"9.5\" font-weight=\"700\" fill=\"#b83227\" class=\"map-label\">← 三音石</text>\n\n          <circle class=\"node-num-bg\" cx=\"272\" cy=\"518\" r=\"11.5\" fill=\"#b83227\"/>\n          <text x=\"272\" y=\"522\" text-anchor=\"middle\" font-size=\"11.5\" font-weight=\"700\" fill=\"#fff\">4</text>\n\n          <!-- 左侧声学与神库说明卡 -->\n          <g class=\"map-label\">\n            <rect x=\"162\" y=\"518\" width=\"94\" height=\"84\" rx=\"9\" fill=\"#fdf7e3\" stroke=\"#e4cb85\" stroke-width=\"1.3\"/>\n            <text x=\"209\" y=\"536\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#7c5400\">神牌库房</text>\n            <text x=\"209\" y=\"553\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#1d4e89\">三大声学现象</text>\n            <text x=\"209\" y=\"569\" text-anchor=\"middle\" font-size=\"10\" fill=\"#4f4840\">① 天心石</text>\n            <text x=\"209\" y=\"583\" text-anchor=\"middle\" font-size=\"10\" fill=\"#4f4840\">② 回音壁</text>\n            <text x=\"209\" y=\"597\" text-anchor=\"middle\" font-size=\"10\" fill=\"#4f4840\">③ 三音石</text>\n          </g>\n        </g>\n\n        <!-- ========== 站 2：圜丘坛（冬至祭天·三层汉白玉圆台） ========== -->\n        <g class=\"map-node\" data-step=\"2\">\n          <circle class=\"hl-ring\" cx=\"360\" cy=\"674\" r=\"46\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n          <!-- 三层同心圆石坛 -->\n          <circle cx=\"360\" cy=\"674\" r=\"41\" fill=\"url(#marbleGrad)\" stroke=\"#b83227\" stroke-width=\"1.6\" filter=\"url(#cardShadow)\"/>\n          <circle cx=\"360\" cy=\"674\" r=\"29\" fill=\"#faf6ee\" stroke=\"#c96b5e\" stroke-width=\"1.2\"/>\n          <circle cx=\"360\" cy=\"674\" r=\"17\" fill=\"#ffffff\" stroke=\"#c96b5e\" stroke-width=\"1.1\"/>\n          <!-- 天心石 -->\n          <circle cx=\"360\" cy=\"674\" r=\"6\" fill=\"#b83227\"/>\n          <text x=\"360\" y=\"698\" text-anchor=\"middle\" font-size=\"9.5\" font-weight=\"700\" fill=\"#8c231a\" class=\"map-label\">9 → 81</text>\n\n          <circle class=\"node-num-bg\" cx=\"318\" cy=\"642\" r=\"11.5\" fill=\"#b83227\"/>\n          <text x=\"318\" y=\"646\" text-anchor=\"middle\" font-size=\"11.5\" font-weight=\"700\" fill=\"#fff\">2</text>\n\n          <!-- 左侧圜丘说明卡 -->\n          <g class=\"map-label\">\n            <rect x=\"162\" y=\"636\" width=\"144\" height=\"76\" rx=\"10\" fill=\"#ffffff\" stroke=\"#d89289\" stroke-width=\"1.4\" filter=\"url(#cardShadow)\"/>\n            <text x=\"172\" y=\"655\" font-size=\"13.5\" font-weight=\"700\" fill=\"#b83227\">圜丘坛 · 冬至祭天</text>\n            <text x=\"172\" y=\"673\" font-size=\"10.5\" fill=\"#332e28\">露天三层汉白玉圆台</text>\n            <text x=\"172\" y=\"689\" font-size=\"10.5\" font-weight=\"700\" fill=\"#1d4e89\">中心天心石 · 全是9的倍数</text>\n            <text x=\"172\" y=\"704\" font-size=\"9.5\" fill=\"#6e675e\">一圈9块递增至81 · 9级台阶</text>\n          </g>\n        </g>\n\n        <!-- ========== 站 3：圜丘东南附属设施 & 祭天九项仪程 ========== -->\n        <g class=\"map-node\" data-step=\"3\">\n          <rect class=\"hl-ring\" x=\"414\" y=\"630\" width=\"146\" height=\"90\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n          <rect x=\"416\" y=\"632\" width=\"142\" height=\"86\" rx=\"10\" fill=\"#fffaf5\" stroke=\"#d98c6c\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n          <circle class=\"node-num-bg\" cx=\"430\" cy=\"647\" r=\"10.5\" fill=\"#b83227\"/>\n          <text x=\"430\" y=\"651\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">3</text>\n          <g class=\"map-label\">\n            <text x=\"446\" y=\"651\" font-size=\"12\" font-weight=\"700\" fill=\"#9c2b20\">东南附属 & 九仪程</text>\n            <text x=\"424\" y=\"669\" font-size=\"10\" fill=\"#3b352e\">燔柴炉 · 瘗坎 · 燎炉 · 望灯杆</text>\n            <rect x=\"422\" y=\"675\" width=\"130\" height=\"36\" rx=\"6\" fill=\"#fdf0ee\"/>\n            <text x=\"487\" y=\"690\" text-anchor=\"middle\" font-size=\"9.8\" font-weight=\"700\" fill=\"#9c2b20\">请神3: 迎帝神·奠玉帛·进俎</text>\n            <text x=\"487\" y=\"704\" text-anchor=\"middle\" font-size=\"9.8\" font-weight=\"700\" fill=\"#1d4e89\">敬酒3:初亚终｜送客3:撤送望</text>\n          </g>\n        </g>\n\n        <!-- ========== 南门入口标志：昭亨门（连到站1/起点） ========== -->\n        <g class=\"map-node\" data-step=\"2\">\n          <rect x=\"282\" y=\"732\" width=\"156\" height=\"30\" rx=\"8\" fill=\"#b83227\" filter=\"url(#cardShadow)\"/>\n          <text x=\"360\" y=\"751\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#ffffff\">🚩 昭亨门（南门起点 · 往北走）</text>\n        </g>\n\n        <!-- ========== 站 0：开场沿革横幅（独立放底部，绝不挡建筑） ========== -->\n        <g class=\"map-node\" data-step=\"0\">\n          <rect class=\"hl-ring\" x=\"30\" y=\"782\" width=\"580\" height=\"68\" rx=\"13\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n          <rect x=\"32\" y=\"784\" width=\"576\" height=\"64\" rx=\"12\" fill=\"#1d4e89\" filter=\"url(#cardShadow)\"/>\n          <circle class=\"node-num-bg\" cx=\"56\" cy=\"816\" r=\"13\" fill=\"#f0c43d\"/>\n          <text x=\"56\" y=\"821\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"800\" fill=\"#1f1b16\">0</text>\n          <g class=\"map-label\">\n            <text x=\"80\" y=\"809\" font-size=\"13.5\" font-weight=\"700\" fill=\"#ffffff\">开场三帝口诀（进门先讲这段）：朱棣建 → 嘉靖分 → 乾隆定</text>\n            <text x=\"80\" y=\"831\" font-size=\"11.5\" fill=\"#d9e8fa\">1420 朱棣建天地坛  ▶  嘉靖天地分祀改名天坛  ▶  乾隆定名祈年殿  ▶  1998 世遗 · 2024 中轴线</text>\n          </g>\n        </g>\n      </svg>", "stations": [{"step": 0, "chip": "0. 开场与三帝沿革", "title": "开场定位 + 历史沿革（三帝口诀）", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "朱棣建（1420 天地坛）"}, {"text": "嘉靖分（天地分祀改天坛）"}, {"text": "乾隆定（定名祈年殿）"}, {"text": "1998 世遗 · 2024 中轴线"}], "shortOral": "各位朋友大家好，欢迎来到世界文化遗产北京天坛！今天咱们跟着古代皇帝的脚步，<b>从南往北走一遍：先去圜丘祭天，再走丹陛桥去祈年殿祈谷</b>。进门前先记住三位皇帝，天坛历史就全通了：<b>朱棣建、嘉靖分、乾隆定</b>。1420年明成祖朱棣建的是“天地坛”，天地合祭；到了嘉靖年间实行天地分祀，北边另建地坛，这儿南边建圜丘专门祭天，才改叫“天坛”；清代乾隆又大规模改建，把北边大殿正式定名为祈年殿。<b>1998年</b>天坛列入世界文化遗产。", "fullText": "各位游客朋友们，大家好！欢迎来到世界文化遗产，北京天坛。我是今天的导游，今天咱们不讲零散的景点，就跟着古代皇帝祭天的路线，从南往北走一遍：先看圜丘坛，再进皇穹宇，沿丹陛桥北上，最后到祈年殿。走完这一趟，您就明白什么叫与天对话。\n\n先在门口把三位皇帝记牢，这是理解天坛的钥匙：朱棣建、嘉靖分、乾隆定。明永乐十八年，也就是公元一四二零年，朱棣迁都北京，仿南京旧制在南郊建起天地坛，天地合在一起祭祀。到了明嘉靖年间，皇帝恢复古礼，改为天地分祀，于是在北郊另建地坛专祭地，在这里的南边增建圜丘坛专祭天，这组建筑才正式改称天坛。清代乾隆年间又大规模扩建改造，把北部主体建筑定名为祈年殿，并重修圜丘、皇穹宇，最终形成咱们今天看到的格局。一九九八年，天坛被列入世界文化遗产名录。"}, {"step": 1, "chip": "1. 位置与布局", "title": "位置及布局特点（天圆地方）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "中轴线南端东侧"}, {"text": "273 公顷 ≈ 4 个故宫"}, {"text": "两重坛墙：北圆南方"}, {"text": "南北一轴：南祭天、北祈谷"}], "shortOral": "咱们先看整体格局：天坛在北京<b>中轴线南端东侧</b>，占地约<b>273公顷，差不多有4个故宫那么大</b>。它最讲究的是两重坛墙——<b>北墙是圆弧形，南墙是方形</b>，取的就是古人“<b>天圆地方</b>”的宇宙观。园区虽大，但精华全在一条南北中轴线上：南边是祭天的圜丘坛，北边是祈谷的祈年殿，中间靠一条360米长的丹陛桥连在一起。", "fullText": "再说说位置。天坛在北京中轴线南端东侧，占地约二百七十三公顷，差不多是故宫的四倍。您别看它大，核心建筑全挤在一条南北轴线上。它有两重坛墙，北边是圆弧形，南边是方形，取的是天圆地方；内外两坛，中间这条南北轴线把圜丘坛和祈谷坛连起来，中间靠一条长约三百六十米的丹陛桥相通。桥面中间那条石板道叫神道，过去只有天上的神明能走，皇帝只能走东侧的御道，大臣走西侧。这个规矩，待会儿咱们上桥时再体会。"}, {"step": 2, "chip": "2. 圜丘坛", "title": "圜丘坛（冬至祭天 · 全是 9 的倍数）", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "冬至祭天（不是祈年殿！）", "danger": true}, {"text": "三层露天汉白玉圆台"}, {"text": "中心：天心石 / 太极石"}, {"text": "9的倍数：9→18→…→81 · 9级台阶"}], "shortOral": "从南门昭亨门进来，第一站就是<b>圜丘坛</b>。先强调一个最容易搞混的点：<b>这儿才是每年冬至皇帝真正祭天的地方！</b>您看这是一座露天三层汉白玉圆台，处处离不开数字“<b>九</b>”，因为九是阳数之极、代表老天。顶层正中心那块圆石叫<b>天心石</b>，往外第一圈铺9块石板、第二圈18块，一直按9的倍数递增到第9圈81块，每层台阶也是9级。您站天心石上小声说话，声音会从四面反回来格外洪亮，古人叫“天人感应”，其实就是声学反射。", "fullText": "好，现在咱们站上第一站，圜丘坛。这里才是真正祭天的地方，每年冬至，皇帝要在这里举行祭天大典。请您低头数数脚下：这是一座三层汉白玉石圆坛，坛面、台阶、栏板，处处都离不开九。九是阳数之极，代表天。上层坛面正中心那块圆石叫天心石，也叫太极石，往外第一圈是九块扇形石板，第二圈十八块，一圈圈按九的倍数递增，最外一圈八十一块；每层台阶也都是九级。您站在天心石上轻轻说句话，会听见声音从四面反射回来，格外洪亮，古人把它叫作天人感应，其实是精妙的声学设计。"}, {"step": 3, "chip": "3. 附属设施 & 九仪程", "title": "圜丘附属设施 + 祭天大典九项仪程", "time": "约 1.5 分钟", "isNew": true, "anchors": [{"text": "东南：燔柴炉 · 瘗坎 · 燎炉 · 望灯杆"}, {"text": "请神3：迎帝神、奠玉帛、进俎"}, {"text": "敬酒3：初献、亚献、终献"}, {"text": "送客3：撤馔、送帝神、望燎"}], "shortOral": "走下圆台往东南角看，这几处附属设施别漏了：<b>燔柴炉</b>用来烧整头祭天小牛，旁边的<b>瘗坎</b>用来埋牛毛牛血，还有一排<b>燎炉</b>和照明用的<b>望灯杆</b>。说到冬至祭天大典，共有严格的<b>九项仪程</b>，记成“请神、敬酒、送客”三步特别好记：第一步请神摆礼——<b>迎帝神、奠玉帛、进俎</b>；第二步敬三轮酒——<b>初献、亚献、终献</b>；第三步收尾送客——<b>撤馔、送帝神、望燎</b>。整套仪式庄严肃穆，皇帝要反复行三跪九叩大礼。", "fullText": "坛外还有几处附属设施，别漏了：东南角的燔柴炉，用来焚烧祭天的牲牢；一旁的瘗坎，用来埋牛毛牛血；还有成排的燎炉和望灯杆，大典时点起高灯，整座坛场通明。祭天大典共分九道仪程，从迎帝神、奠玉帛、进俎，到初献、亚献、终献，再到撤馔、送帝神、望燎，整个过程庄严肃穆，皇帝要反复行三跪九叩礼。"}, {"step": 4, "chip": "4. 皇穹宇 & 三声学", "title": "皇穹宇 + 三大声学现象（回音壁/三音石）", "time": "约 1.5 分钟", "isNew": true, "anchors": [{"text": "单檐蓝瓦圆攒尖 · 祭天神牌库房"}, {"text": "正殿：皇天上帝 + 列祖配位"}, {"text": "东西配殿：日月星辰风云雷雨"}, {"text": "三声学：天心石 + 回音壁 + 三音石"}], "shortOral": "从圜丘往北走几步，进到圆形小院，正中是<b>皇穹宇</b>，单檐蓝瓦圆攒尖顶。说白了它是<b>祭天的神牌库房</b>——平时圜丘露天不放牌位，大典前才从这儿恭请。正殿供奉皇天上帝和历代皇帝配位，<b>东西配殿</b>供奉日月星辰、风云雷雨。这院里藏着天坛最有意思的声学奇观：外面圆形围墙磨砖对缝，贴墙轻声说话对面能听清，就是<b>回音壁</b>；殿前御路有三块石头，拍一次手分别回响一、二、三声，叫<b>三音石</b>。加上刚才的<b>天心石</b>，合称天坛三大声学现象。", "fullText": "往北走几步，咱们进皇穹宇。这一组围墙圆圆的院落，是存放祭天神牌的地方。正殿皇穹宇是单檐蓝瓦圆攒尖顶，鎏金宝顶，清代乾隆年间重建过。殿内正中供奉皇天上帝的神位，两侧配位供清代列祖列宗神牌，东西配殿则供日月星辰、风云雷雨等从祀神位。平时祈年殿和圜丘坛上并不设神位，大典前才从这里恭请迎送，所以这儿相当于天坛的神圣库房。\n\n这个院里还藏着天坛最有意思的声学现象。您和同伴分别站在东西配殿后的围墙边，贴墙小声说话，隔着几十米也能听清，这就是回音壁，靠的是墙面极其平滑致密、声波沿弧面连续反射。再看殿前御路上那三块石头，站在第一块上拍一次手听到一声回响，第二块两声，第三块三声，所以叫三音石。加上刚才圜丘坛的天心石，合称天坛三大声学现象。这些不是玄学，是五百年前工匠把声学和礼制放在一起琢磨出来的结果。"}, {"step": 5, "chip": "5. 丹陛桥", "title": "丹陛桥（360 米高台甬道）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "高出地面的甬道，不是桥！", "danger": true}, {"text": "全长约 360 米"}, {"text": "中神道 · 东御道（帝）· 西王道"}, {"text": "象征“步步登天”"}], "shortOral": "出了皇穹宇，咱们踏上这条长约<b>360米</b>的<b>丹陛桥</b>往北走。别听它叫桥，其实它是<b>高出地面的宽阔甬道</b>，越往北地势越高，寓意“步步登天”。桥面分成三条道特别讲究规矩：<b>正中间是神道</b>，给老天爷神牌走的；<b>东边是御道</b>，皇帝自己走；<b>西边是王道</b>，王公大臣走。走在苍翠古柏中间，看着前方祈年殿的蓝顶越来越清晰，情绪一下就拉起来了。", "fullText": "好，请随我上丹陛桥，往北走。走在这条高出地面的长桥上，两边是苍翠古柏，越往北，祈年殿的蓝瓦金顶就越清晰，古人用这条渐近的路，把祭天的情绪一点点推上去。（配合位置段：桥面中间那条石板道叫神道，过去只有天上的神明能走，皇帝只能走东侧的御道，大臣走西侧。）"}, {"step": 6, "chip": "6. 祈年殿", "title": "祈年殿（正月祈谷 · 28 柱时间密码）", "time": "约 2 分钟", "isNew": false, "anchors": [{"text": "正月祈谷（绝不能说祭天！）", "danger": true}, {"text": "三重檐圆形大殿 · 蓝瓦鎏金顶"}, {"text": "28根楠木柱 = 4龙井(四季) + 12金柱(月) + 12檐柱(时辰)"}, {"text": "12+12=24节气 · 28=二十八星宿"}], "shortOral": "穿过祈年门，眼前就是天坛最著名的地标——<b>祈年殿</b>。再强调一遍：南边圜丘是冬至祭天，<b>这儿是每年正月祈求五谷丰登的“祈谷”之所</b>。它建在三层圆台基上，蓝瓦象征上天，三重檐加鎏金宝顶。最绝的是殿里不用大梁，全靠<b>28根楠木柱</b>撑着：最里圈<b>4根龙井柱代表四季</b>，中间<b>12根金柱代表12个月</b>，外圈<b>12根檐柱代表12个时辰</b>，中外24根合起来是24节气，总共28根对应二十八星宿！说白了，古人把一整套中国时间观盖进了一座大殿里。", "fullText": "现在咱们到了祈谷坛建筑群。先说清楚最容易讲错的一点：圜丘坛是冬至祭天，眼前这组建筑是正月祈谷，祈求五谷丰登，两回事儿。把祈年殿说成皇帝祭天的地方，是导游词里最常见的硬伤。\n\n正中间这座三重檐的圆形大殿，就是祈年殿。蓝色琉璃瓦象征上天，鎏金宝顶，三层圆形台基。请进殿抬头看：殿内不用大梁长檩，全靠二十八根楠木柱支撑，对应二十八星宿。最里圈四根龙井柱，象征一年四季；中间十二根金柱，象征一年十二个月；最外十二根檐柱，象征一天十二个时辰。四季、十二月、十二时辰加在一起，就是一整套时间秩序，用建筑把天时说了出来。清代每年正月上辛日，皇帝在这里行祈谷礼，殿内陈设神牌、供案、乐器，殿外月台上奏乐。"}, {"step": 7, "chip": "7. 皇乾殿", "title": "皇乾殿（祈谷坛神牌库房）", "time": "约 0.5 分钟", "isNew": true, "anchors": [{"text": "位于祈年殿正北"}, {"text": "存放祈谷大典皇天上帝与配位神牌"}, {"text": "类比：祈谷坛这一侧的“皇穹宇”"}], "shortOral": "绕到祈年殿正北边，这座庄重的大殿叫<b>皇乾殿</b>。记它特别简单：南边圜丘的神牌库房叫皇穹宇，<b>北边祈谷坛的神牌库房就是皇乾殿</b>，平时专门用来存放正月祈谷大典所用的皇天上帝和列祖配位神牌，大典当天再恭请进祈年殿。", "fullText": "祈年殿北边那座庄重的大殿是皇乾殿，平时存放祈谷大典所用的皇天上帝神牌和配位神牌，相当于祈谷坛这一侧的神库。"}, {"step": 8, "chip": "8. 供菜廊 & 收尾", "title": "供菜廊（七十二长廊）+ 价值收尾", "time": "约 1.5 分钟", "isNew": true, "anchors": [{"text": "祈谷坛西侧 · 俗称七十二长廊"}, {"text": "连通神厨、宰牲亭 → 祈年殿"}, {"text": "封闭送供品：不见天日、不沾风沙"}, {"text": "顺提：祈年门 · 七星石 · 1998世遗收尾"}], "shortOral": "往祈谷坛西边看，这条长长的封闭廊子叫<b>供菜廊</b>，俗称<b>七十二长廊</b>，它把西边的<b>神厨、宰牲亭</b>一直连到祈年殿，旁边还有<b>七星石</b>。为什么修成封闭的？说白了就是送往大殿的祭祀贡品必须不见天日、不沾风沙，体现对上天的极致虔诚。\n各位朋友，走完天坛记住两句话就够了：<b>北圆南方是天圆地方，南圜丘祭天、北祈年祈谷</b>。1998年它入选世界文化遗产，2024年又作为北京中轴线重要组成部分申遗成功。我的讲解到此结束，谢谢大家！", "fullText": "西侧那一条长长的封闭廊子，俗称七十二长廊，也叫供菜廊，从神厨、宰牲亭一直通到祈年殿，祭祀时供品从这条廊子里运送，不见天日、不沾风沙，名字就是这么来的。院外还有祈年门、神厨、宰牲亭和七星石。这几处看着不起眼，却是整套祭祀流程里少不了的一环：祭品在哪儿备、从哪条路送、神位从哪儿请，全靠它们串起来。\n\n各位朋友，走完这一趟，您会发现天坛其实只用两句话就能记住：北圆南方是天圆地方，南圜丘祭天、北祈年祈谷，中间一条丹陛桥把人间和上天连起来。所有数字、颜色、声音，都在讲同一件事，就是古人对天地的敬畏。一九九八年它被列入世界文化遗产，靠的不只是建筑好看，更是这套完整到令人叹服的礼制思想。\n\n天坛的讲解就到这里，谢谢大家的聆听，接下来请自由参观，别忘了去回音壁那儿试一试。"}], "audios": ["audio/tiantan/step_0.mp3", "audio/tiantan/step_1.mp3", "audio/tiantan/step_2.mp3", "audio/tiantan/step_3.mp3", "audio/tiantan/step_4.mp3", "audio/tiantan/step_5.mp3", "audio/tiantan/step_6.mp3", "audio/tiantan/step_7.mp3", "audio/tiantan/step_8.mp3"]}, {"id": "yiheyuan", "name": "颐和园", "short_name": "4. 颐和园", "badge": "皇家园林集大成", "slogan": "水面占 3/4，东宫门进 → 宫廷区 → 沿长廊往西 → 爬前山中轴", "ticket_html": "<strong>四、颐和园：</strong>颐和园的历史沿革（辽、金、元、明各时期的名称，清代的建造及改造），建筑布局；宫廷区主要建筑的名称含义、用途及殿内外主要陈设（涵虚罨秀坊、东宫门、仁寿殿、玉澜堂、宜芸馆、乐寿堂）；万寿山前山主要建筑的组成及建筑特点（长廊、排云殿、佛香阁、智慧海、听鹂馆、清晏舫）；被列入世界文化遗产的时间。", "svg": "<svg class=\"spot-map-svg\" viewBox=\"0 0 640 865\" xmlns=\"http://www.w3.org/2000/svg\">\n  \n  <defs>\n    <filter id=\"cardShadow\" x=\"-10%\" y=\"-10%\" width=\"120%\" height=\"125%\">\n      <feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"2.5\" flood-color=\"#2c2419\" flood-opacity=\"0.10\"/>\n    </filter>\n    <filter id=\"activeGlow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">\n      <feDropShadow dx=\"0\" dy=\"0\" stdDeviation=\"4.5\" flood-color=\"#d99a00\" flood-opacity=\"0.55\"/>\n    </filter>\n    <linearGradient id=\"blueTile\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#2e6eb8\"/><stop offset=\"100%\" stop-color=\"#173e6f\"/>\n    </linearGradient>\n    <linearGradient id=\"goldRoof\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#f3c642\"/><stop offset=\"100%\" stop-color=\"#c98c10\"/>\n    </linearGradient>\n    <linearGradient id=\"redWall\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#c83e32\"/><stop offset=\"100%\" stop-color=\"#8f241b\"/>\n    </linearGradient>\n    <linearGradient id=\"lakeBlue\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#d6eaf8\"/><stop offset=\"100%\" stop-color=\"#aed6f1\"/>\n    </linearGradient>\n    <linearGradient id=\"hillGreen\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#7fb084\"/><stop offset=\"100%\" stop-color=\"#527d58\"/>\n    </linearGradient>\n    <radialGradient id=\"marbleGrad\" cx=\"50%\" cy=\"45%\" r=\"55%\">\n      <stop offset=\"0%\" stop-color=\"#ffffff\"/><stop offset=\"100%\" stop-color=\"#e5dfd2\"/>\n    </radialGradient>\n    <marker id=\"arrowRed\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n      <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#b83227\"/>\n    </marker>\n    <marker id=\"arrowBlue\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n      <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#2e6eb8\"/>\n    </marker>\n  </defs>\n\n  <rect x=\"0\" y=\"0\" width=\"640\" height=\"865\" fill=\"#faf6ee\"/>\n  <text x=\"26\" y=\"34\" font-size=\"19\" font-weight=\"700\" fill=\"#1f1b16\">颐和园 · 记忆宫殿路线图</text>\n  <text x=\"26\" y=\"54\" font-size=\"12\" fill=\"#6e675e\">一句话：水面占 3/4，东宫门进 → 宫廷区 → 沿长廊往西 → 爬前山中轴</text>\n  \n  <g transform=\"translate(578, 34)\">\n    <circle cx=\"0\" cy=\"0\" r=\"19\" fill=\"#fff\" stroke=\"#d8cfc0\" stroke-width=\"1.2\"/>\n    <polygon points=\"0,-13 4.5,1 0,-2 -4.5,1\" fill=\"#b83227\"/>\n    <polygon points=\"0,13 4.5,1 0,3 -4.5,1\" fill=\"#b7afa1\"/>\n    <text x=\"0\" y=\"-22\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#b83227\">北</text>\n    <text x=\"-26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">西</text>\n    <text x=\"26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">东</text>\n  </g>\n\n\n  <!-- 园外西北：借景西山 -->\n  <g opacity=\"0.55\">\n    <path d=\"M 28 165 Q 74 96 134 150 Q 178 108 232 165 Z\" fill=\"#9bb8a0\"/>\n  </g>\n  <text x=\"40\" y=\"106\" font-size=\"11\" font-weight=\"700\" fill=\"#3e6b48\" class=\"map-label\">⛰️ 借景西山（虽由人作，宛自天开）</text>\n\n  <!-- 园区大框 -->\n  <rect x=\"28\" y=\"118\" width=\"584\" height=\"650\" rx=\"16\" fill=\"#f5f1e6\" stroke=\"#b8ae9c\" stroke-width=\"1.8\"/>\n\n  <!-- 万寿山（北山绿丘） -->\n  <path d=\"M 38 440 Q 90 152 270 144 Q 420 148 450 440 Z\" fill=\"#e5efe4\" stroke=\"#8ab08e\" stroke-width=\"1.5\"/>\n  <text x=\"112\" y=\"176\" font-size=\"12\" font-weight=\"700\" fill=\"#276749\" class=\"map-label\">万寿山（前山）</text>\n\n  <!-- 昆明湖（占四分之三大蓝水面！） -->\n  <path d=\"M 38 492 L 598 492 L 598 756 Q 320 762 38 756 Z\" fill=\"url(#lakeBlue)\" stroke=\"#7fb3d5\" stroke-width=\"1.5\"/>\n\n  <!-- 动线箭头：东宫门(1) -> 仁寿殿(2) -> 居住区(3) -> 长廊(4) -> 排云/佛香(5) -> 智慧海(6) -> 西侧(7) -->\n  <g fill=\"none\" stroke=\"#b83227\" stroke-width=\"2.2\" stroke-dasharray=\"5 3\">\n    <line x1=\"534\" y1=\"414\" x2=\"534\" y2=\"394\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"534\" y1=\"322\" x2=\"534\" y2=\"300\" marker-end=\"url(#arrowRed)\"/>\n    <path d=\"M 464 252 Q 444 452 418 456\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"286\" y1=\"432\" x2=\"286\" y2=\"386\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"286\" y1=\"262\" x2=\"286\" y2=\"236\" marker-end=\"url(#arrowRed)\"/>\n    <path d=\"M 206 320 L 182 356\" marker-end=\"url(#arrowRed)\"/>\n  </g>\n\n  <!-- 站 6：智慧海（万寿山顶） -->\n  <g class=\"map-node\" data-step=\"6\">\n    <rect class=\"hl-ring\" x=\"196\" y=\"156\" width=\"180\" height=\"76\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"198\" y=\"158\" width=\"176\" height=\"72\" rx=\"10\" fill=\"#fffdf5\" stroke=\"#c9951a\" stroke-width=\"1.6\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"212\" cy=\"173\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"212\" y=\"177\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">6</text>\n    <g class=\"map-label\">\n      <text x=\"294\" y=\"177\" text-anchor=\"middle\" font-size=\"13.5\" font-weight=\"700\" fill=\"#8b5a00\">智慧海（万寿山顶）</text>\n      <text x=\"286\" y=\"196\" text-anchor=\"middle\" font-size=\"10.2\" font-weight=\"700\" fill=\"#1d4e89\">无梁佛殿 · 砖石拱券承重</text>\n      <text x=\"286\" y=\"212\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#4f4840\">黄绿琉璃千佛 · 两次大火幸存</text>\n    </g>\n  </g>\n\n  <!-- 站 5：佛香阁 + 排云殿（前山中轴主角） -->\n  <g class=\"map-node\" data-step=\"5\">\n    <rect class=\"hl-ring\" x=\"192\" y=\"260\" width=\"188\" height=\"122\" rx=\"12\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"194\" y=\"262\" width=\"184\" height=\"118\" rx=\"11\" fill=\"#fffaf0\" stroke=\"#c83e32\" stroke-width=\"1.8\" filter=\"url(#cardShadow)\"/>\n    <!-- 佛香阁八面三层四重檐剪影 -->\n    <g transform=\"translate(206, 274)\">\n      <polygon points=\"18,4 28,13 8,13\" fill=\"url(#goldRoof)\"/>\n      <polygon points=\"5,22 31,22 27,14 9,14\" fill=\"url(#goldRoof)\"/>\n      <polygon points=\"3,32 33,32 29,24 7,24\" fill=\"url(#goldRoof)\"/>\n      <polygon points=\"1,42 35,42 31,34 5,34\" fill=\"url(#goldRoof)\"/>\n      <rect x=\"6\" y=\"42\" width=\"24\" height=\"16\" fill=\"url(#redWall)\"/>\n      <rect x=\"0\" y=\"58\" width=\"36\" height=\"12\" fill=\"#cfc6b4\" stroke=\"#8a7962\"/>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"208\" cy=\"276\" r=\"11\" fill=\"#b83227\"/>\n    <text x=\"208\" y=\"280\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">5</text>\n    <g class=\"map-label\">\n      <text x=\"248\" y=\"282\" font-size=\"13.5\" font-weight=\"800\" fill=\"#9c251c\">佛香阁（全园中心）</text>\n      <text x=\"248\" y=\"299\" font-size=\"10.2\" font-weight=\"700\" fill=\"#b83227\">八面三层四重檐楼阁</text>\n      <text x=\"248\" y=\"314\" font-size=\"9.6\" fill=\"#4f4840\">不是木塔 · 以阁镇山</text>\n      <line x1=\"204\" y1=\"330\" x2=\"368\" y2=\"330\" stroke=\"#ebd9b7\"/>\n      <text x=\"286\" y=\"348\" text-anchor=\"middle\" font-size=\"12.5\" font-weight=\"700\" fill=\"#1d4e89\">排云殿（阁下中轴）</text>\n      <text x=\"286\" y=\"366\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#4f4840\">慈禧做寿受朝 · 神仙排云出</text>\n    </g>\n  </g>\n\n  <!-- 站 7：听鹂馆 & 清晏舫（前山西侧=左） -->\n  <g class=\"map-node\" data-step=\"7\">\n    <rect class=\"hl-ring\" x=\"40\" y=\"312\" width=\"140\" height=\"148\" rx=\"12\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"42\" y=\"314\" width=\"136\" height=\"144\" rx=\"11\" fill=\"#ffffff\" stroke=\"#2e6eb8\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <!-- 石舫小船剪影 -->\n    <g transform=\"translate(64, 412)\">\n      <polygon points=\"0,24 10,34 80,34 90,24\" fill=\"#ebe4d5\" stroke=\"#8a7962\" stroke-width=\"1.2\"/>\n      <rect x=\"14\" y=\"10\" width=\"60\" height=\"14\" fill=\"#d6eaf8\" stroke=\"#2e6eb8\"/>\n      <line x1=\"34\" y1=\"10\" x2=\"34\" y2=\"24\" stroke=\"#2e6eb8\"/>\n      <line x1=\"54\" y1=\"10\" x2=\"54\" y2=\"24\" stroke=\"#2e6eb8\"/>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"56\" cy=\"329\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"56\" y=\"333\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">7</text>\n    <g class=\"map-label\">\n      <text x=\"116\" y=\"333\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#23201c\">听鹂馆（听戏）</text>\n      <text x=\"110\" y=\"350\" text-anchor=\"middle\" font-size=\"9.6\" fill=\"#5e574e\">帝后听戏赐宴·宫廷饭庄</text>\n      <line x1=\"52\" y1=\"362\" x2=\"168\" y2=\"362\" stroke=\"#e4ddd0\"/>\n      <text x=\"110\" y=\"381\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#1d4e89\">清晏舫（石舫）</text>\n      <text x=\"110\" y=\"398\" text-anchor=\"middle\" font-size=\"9.6\" fill=\"#332e28\">汉白玉36m · 西式舱楼</text>\n      <text x=\"110\" y=\"412\" text-anchor=\"middle\" font-size=\"9.2\" fill=\"#6b4c00\">河清海晏 · 永不倾覆</text>\n    </g>\n  </g>\n\n  <!-- 站 4：长廊（728米红金丝带横穿湖北岸） -->\n  <g class=\"map-node\" data-step=\"4\">\n    <rect class=\"hl-ring\" x=\"186\" y=\"432\" width=\"234\" height=\"58\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"188\" y=\"434\" width=\"230\" height=\"54\" rx=\"10\" fill=\"#fdf0ee\" stroke=\"#b83227\" stroke-width=\"1.8\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"204\" cy=\"461\" r=\"11\" fill=\"#b83227\"/>\n    <text x=\"204\" y=\"465\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">4</text>\n    <g class=\"map-label\">\n      <text x=\"314\" y=\"454\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"800\" fill=\"#9c251c\">← 长廊（728米 · 273间）</text>\n      <text x=\"314\" y=\"471\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#332e28\">1.4万幅苏式彩画 · 四季八角亭</text>\n      <text x=\"314\" y=\"484\" text-anchor=\"middle\" font-size=\"9.2\" fill=\"#1d4e89\" font-weight=\"600\">邀月门 → 石丈亭 · 吉尼斯最长画廊</text>\n    </g>\n  </g>\n\n  <!-- 站 3：居住区三院（玉澜堂/宜芸馆/乐寿堂，东侧偏北） -->\n  <g class=\"map-node\" data-step=\"3\">\n    <rect class=\"hl-ring\" x=\"458\" y=\"182\" width=\"144\" height=\"118\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"460\" y=\"184\" width=\"140\" height=\"114\" rx=\"10\" fill=\"#ffffff\" stroke=\"#c89228\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"475\" cy=\"199\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"475\" y=\"203\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">3</text>\n    <g class=\"map-label\">\n      <text x=\"536\" y=\"203\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#9c251c\">帝后生活三院</text>\n      <text x=\"468\" y=\"225\" font-size=\"10.2\" font-weight=\"700\" fill=\"#1d4e89\">• 玉澜堂：光绪(砌墙)</text>\n      <text x=\"468\" y=\"244\" font-size=\"10.2\" font-weight=\"700\" fill=\"#276749\">• 宜芸馆：皇后(藏书)</text>\n      <text x=\"468\" y=\"263\" font-size=\"10.2\" font-weight=\"700\" fill=\"#b83227\">• 乐寿堂：慈禧</text>\n      <text x=\"476\" y=\"279\" font-size=\"9.4\" fill=\"#5e574e\">青芝岫(败家石)</text>\n      <text x=\"476\" y=\"292\" font-size=\"9.4\" fill=\"#6b4c00\">玉兰海棠牡丹=玉堂富贵</text>\n    </g>\n  </g>\n\n  <!-- 站 2：仁寿殿（宫廷办公区） -->\n  <g class=\"map-node\" data-step=\"2\">\n    <rect class=\"hl-ring\" x=\"458\" y=\"320\" width=\"144\" height=\"74\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"460\" y=\"322\" width=\"140\" height=\"70\" rx=\"10\" fill=\"#fffdf5\" stroke=\"#c83e32\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"475\" cy=\"337\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"475\" y=\"341\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">2</text>\n    <g class=\"map-label\">\n      <text x=\"536\" y=\"341\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"700\" fill=\"#9c251c\">仁寿殿（办公）</text>\n      <text x=\"530\" y=\"360\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#332e28\">原勤政殿 · 慈禧光绪听政</text>\n      <text x=\"530\" y=\"376\" text-anchor=\"middle\" font-size=\"9.6\" fill=\"#1d4e89\" font-weight=\"600\">紫檀座·铜龙凤·寿星石</text>\n    </g>\n  </g>\n\n  <!-- 站 1：涵虚罨秀坊 + 东宫门（东入口起点） -->\n  <g class=\"map-node\" data-step=\"1\">\n    <rect class=\"hl-ring\" x=\"458\" y=\"414\" width=\"144\" height=\"70\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"460\" y=\"416\" width=\"140\" height=\"66\" rx=\"10\" fill=\"#b83227\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"475\" cy=\"431\" r=\"10.5\" fill=\"#f3c642\"/>\n    <text x=\"475\" y=\"435\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"800\" fill=\"#1f1b16\">1</text>\n    <g class=\"map-label\">\n      <text x=\"536\" y=\"435\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#ffffff\">🚩 东宫门起点</text>\n      <text x=\"530\" y=\"454\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#ffe8d6\">涵虚罨秀坊(3间4柱7楼)</text>\n      <text x=\"530\" y=\"470\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#ffe8d6\">东宫门(5间3明2暗)</text>\n    </g>\n  </g>\n\n  <!-- 站 8：昆明湖（西堤 + 十七孔桥 + 南湖岛） -->\n  <g class=\"map-node\" data-step=\"8\">\n    <rect class=\"hl-ring\" x=\"48\" y=\"510\" width=\"540\" height=\"236\" rx=\"14\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <!-- 西堤（仿苏堤） -->\n    <path d=\"M 110 518 Q 130 620 156 742\" fill=\"none\" stroke=\"#7fb084\" stroke-width=\"10\" stroke-linecap=\"round\"/>\n    <text x=\"128\" y=\"640\" font-size=\"10.5\" font-weight=\"700\" fill=\"#276749\" class=\"map-label\">西堤（仿苏堤）</text>\n    <!-- 南湖岛 + 十七孔桥 -->\n    <ellipse cx=\"426\" cy=\"644\" rx=\"48\" ry=\"30\" fill=\"#8ab08e\" stroke=\"#4f7854\" stroke-width=\"1.5\"/>\n    <text x=\"426\" y=\"648\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#ffffff\" class=\"map-label\">南湖岛</text>\n    <line x1=\"474\" y1=\"644\" x2=\"578\" y2=\"644\" stroke=\"#ffffff\" stroke-width=\"8\"/>\n    <line x1=\"474\" y1=\"644\" x2=\"578\" y2=\"644\" stroke=\"#9e8e74\" stroke-width=\"2\" stroke-dasharray=\"6 4\"/>\n    <text x=\"526\" y=\"630\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#1d4e89\" class=\"map-label\">十七孔桥（石狮）</text>\n\n    <!-- 湖心信息卡 -->\n    <rect x=\"190\" y=\"532\" width=\"214\" height=\"78\" rx=\"10\" fill=\"rgba(255,255,255,0.92)\" stroke=\"#6aa2cf\" stroke-width=\"1.4\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"206\" cy=\"548\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"206\" y=\"552\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">8</text>\n    <g class=\"map-label\">\n      <text x=\"306\" y=\"552\" text-anchor=\"middle\" font-size=\"13.5\" font-weight=\"700\" fill=\"#1d4e89\">昆明湖（水面占 3/4）</text>\n      <text x=\"297\" y=\"572\" text-anchor=\"middle\" font-size=\"10.4\" fill=\"#332e28\">西堤仿苏堤 · 十七孔桥 · 江南意趣</text>\n      <text x=\"297\" y=\"592\" text-anchor=\"middle\" font-size=\"10.4\" font-weight=\"700\" fill=\"#276749\">双重身份：皇家园林 + 城市调蓄水库</text>\n    </g>\n  </g>\n\n  <!-- 站 0：底部四朝改名横幅 -->\n  <g class=\"map-node\" data-step=\"0\">\n    <rect class=\"hl-ring\" x=\"28\" y=\"782\" width=\"584\" height=\"68\" rx=\"13\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"30\" y=\"784\" width=\"580\" height=\"64\" rx=\"12\" fill=\"#1d4e89\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"54\" cy=\"816\" r=\"13\" fill=\"#f3c642\"/>\n    <text x=\"54\" y=\"821\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"800\" fill=\"#1f1b16\">0</text>\n    <g class=\"map-label\">\n      <text x=\"78\" y=\"809\" font-size=\"13\" font-weight=\"700\" fill=\"#ffffff\">开场改名链：辽金(金山金海) → 元(瓮山泊·郭守敬) → 明(西湖圆静寺)</text>\n      <text x=\"78\" y=\"831\" font-size=\"11.2\" fill=\"#ffe6a3\">1750 乾隆清漪园 → 1860 英法烧 → 1888 改颐和园 → 1900 八国再烧（烧过两次!）· 1998 世遗</text>\n    </g>\n  </g>\n</svg>", "stations": [{"step": 0, "chip": "0. 四朝改名与两度被毁", "title": "开场 + 历史沿革（辽金元明清 · 烧过两次）", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "辽金(金山金海) → 元(瓮山泊·郭守敬) → 明(西湖圆静寺)"}, {"text": "1750 乾隆清漪园（祝母六十大寿）"}, {"text": "烧过两次！1860 英法联军 + 1900 八国联军", "danger": true}, {"text": "1888 改名颐和园（颐养冲和）· 1998 世遗"}], "shortOral": "各位朋友大家好，欢迎来到中国现存最完整的皇家园林——<b>颐和园</b>，<b>1998年</b>列入世界文化遗产。它的身世记成一条改名链特别清楚：<b>辽金</b>叫金山、金海；<b>元代</b>叫瓮山、瓮山泊，经<b>郭守敬</b>疏浚成大都上游水库；<b>明代</b>叫西湖、山上有圆静寺。清朝<b>1750年（乾隆十五年）</b>，乾隆为给母亲祝六十大寿，改名万寿山、昆明湖，建成<b>清漪园</b>。切记它被<b>烧过两回</b>：<b>1860年</b>被英法联军焚毁，<b>1888年</b>光绪年间慈禧重修改名<b>颐和园</b>（取颐养冲和），<b>1900年</b>又遭八国联军破坏后再次修复。", "fullText": "各位游客朋友们，大家好！欢迎来到颐和园。我是今天的导游。这里在北京西北郊，是中国现存规模最大、保存最完整的皇家园林，也是中国四大名园之一，一九九八年被列入世界文化遗产名录。\n\n咱们先把这座园子的身世说清楚，因为它的名字换过好几回。早在辽金时期，这一带山叫金山，水叫金海，建有行宫；到了元代，传说挖出一只石瓮，山改名瓮山，水改名瓮山泊，后来经郭守敬疏浚，成了大都城上游的水库；明代湖称西湖，山上有圆静寺，是京郊有名的游赏地。真正把它建成皇家园林的，是清代乾隆皇帝。乾隆十五年，为给母亲崇庆皇太后祝六十大寿，在圆静寺旧址兴建大报恩延寿寺，把瓮山改名万寿山，把西湖拓成昆明湖，园子取名清漪园，历时十余年建成。可惜一八六零年英法联军进京，清漪园被焚毁。光绪十四年，慈禧太后重修此园，取颐养冲和之意，改名颐和园。一九零零年八国联军再来，园子又遭严重破坏，此后再次修复。请留意，是烧过两回，不是一回，这一点很多人讲错。"}, {"step": 1, "chip": "1. 布局与涵虚坊/东宫门", "title": "整体布局 + 涵虚罨秀坊 + 东宫门", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "万寿山为骨 · 昆明湖水面占 3/4 · 借景西山"}, {"text": "三片区：东宫廷区 / 居住区 / 万寿山昆明湖风景区"}, {"text": "涵虚罨秀坊：三间四柱七楼 · 湖水浩渺+山色掩映"}, {"text": "东宫门：规制最高 · 五间三明两暗 · 中门帝后专走"}], "shortOral": "看整体布局：全园以<b>万寿山和昆明湖</b>为骨架，<b>水面占四分之三</b>，巧妙<b>借景西山</b>，达到“虽由人作，宛自天开”。功能分三大片：东边宫廷办公区、帝后居住区，以及最大的山水风景区。进门先看第一道牌坊——<b>涵虚罨秀坊</b>，三间四柱七楼，“涵虚”指湖水浩渺、“罨秀”指山色掩映。往里是全园规制最高的正门<b>东宫门</b>，五间三明两暗，正中大门过去只给皇帝太后出入。", "fullText": "再说布局。全园以万寿山和昆明湖为骨架，水面占四分之三，山在前、水在后，山水相依。功能上分三大片：以仁寿殿为中心的宫廷区，是慈禧和光绪处理朝政的地方；以乐寿堂、玉澜堂、宜芸馆为主的居住生活区；再就是万寿山昆明湖构成的风景游览区。咱们今天的动线是：从东宫门进，走宫廷区，再沿长廊上万寿山，最后到昆明湖边。\n\n眼前这座三间四柱七楼的牌坊，叫涵虚罨秀坊，是进园的第一道标志。涵虚说的是湖水浩渺，罨秀说的是山色掩映，四个字把园子的气质点透了。往里是东宫门，园内规制最高的门，五间三明两暗，中间那道门过去只有帝后出入才开，臣子只能走两侧。"}, {"step": 2, "chip": "2. 仁寿殿", "title": "仁寿殿（理政正殿 · 殿内外陈设）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "乾隆时名“勤政殿” → 重建改“仁寿”（仁者寿）"}, {"text": "用途：慈禧、光绪坐朝听政、接见外国使节"}, {"text": "殿内：紫檀宝座、雕龙屏风、掌扇、铜龙铜凤"}, {"text": "院中：太湖石寿星石、铜麒麟、牡丹台"}], "shortOral": "进东宫门正对着的是<b>仁寿殿</b>。乾隆时叫“<b>勤政殿</b>”，提醒自己逛园子也不能荒废朝政；光绪重建改名仁寿，取“仁者寿”。它是慈禧、光绪在园里坐朝听政、接见外国使节的办公室。殿里陈设<b>紫檀宝座、雕龙屏风、铜龙铜凤</b>，院子里摆着<b>寿星石、铜麒麟和牡丹台</b>，处处都绕不开一个“寿”字。", "fullText": "进门正对的就是仁寿殿。乾隆年间这里叫勤政殿，意思是园居也不能荒废政务；重建后改名仁寿，取仁者寿。它是慈禧、光绪在园中坐朝听政、接见外国使节的正殿，殿内陈设紫檀宝座、雕龙屏风、掌扇、鼎炉与铜龙铜凤，院中有太湖石寿星石、铜麒麟和牡丹台，处处不离一个寿字。"}, {"step": 3, "chip": "3. 居住区三院", "title": "玉澜堂 · 宜芸馆 · 乐寿堂（帝后生活区）", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "玉澜堂：光绪寝宫 · 戊戌变法后砌墙封堵软禁"}, {"text": "宜芸馆：皇后住处 · 芸草避书虫（藏书宜读）"}, {"text": "乐寿堂：慈禧住处 · 青芝岫（败家石）"}, {"text": "乐寿堂院植：玉兰+海棠+牡丹 = 玉堂富贵"}], "shortOral": "仁寿殿后面是三座著名的居住院落，记人名就全记住：第一座<b>玉澜堂</b>是<b>光绪皇帝</b>的寝宫，戊戌变法失败后东西配殿被砌墙封堵，光绪曾被软禁在这儿；第二座<b>宜芸馆</b>是<b>皇后</b>住处，芸草能防书虫，寓意藏书宜读；往西靠湖的<b>乐寿堂</b>是<b>慈禧太后</b>的寝宫，院里那块巨大太湖石叫<b>青芝岫</b>（俗称败家石），院中种着玉兰、海棠、牡丹，谐音“<b>玉堂富贵</b>”。", "fullText": "仁寿殿后面的几组院落，是帝后的生活区。玉澜堂是光绪皇帝的寝宫，院里东西配殿霞芬室、藕香榭，戊戌变法之后曾被砌墙封堵，如今还能看出痕迹，一座院子藏着一段沉重的历史。宜芸馆是皇后的住处，芸草可以避书虫，名字取的是藏书宜读之意。再往西是乐寿堂，慈禧太后住的地方，院里那块巨大的太湖石叫青芝岫，俗称败家石，相传明代米万钟为运它倾尽家财也没能运走；院中植玉兰、海棠、牡丹，谐音玉堂富贵。殿内宝座、御案、自鸣钟、象牙席一应陈设，是晚清宫廷生活的实物写照。"}, {"step": 4, "chip": "4. 长廊", "title": "长廊（728 米 · 273 间 · 1.4 万幅苏式彩画）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "东起邀月门 → 西至石丈亭"}, {"text": "全长 728 米 · 共 273 间 · 1990 吉尼斯最长画廊"}, {"text": "1.4 万余幅苏式彩画（几乎无重样）"}, {"text": "四座重檐八角亭：象征春夏秋冬"}], "shortOral": "走出乐寿堂往西，踏上世界最长的画廊——<b>长廊</b>！它东起<b>邀月门</b>、西至<b>石丈亭</b>，记住三个硬数字：全长<b>728米</b>、共<b>273间</b>、梁上画着<b>1.4万多幅苏式彩画</b>几乎没有重样的，<b>1990年</b>载入吉尼斯世界纪录。廊中串着<b>四座八角亭</b>象征春夏秋冬，既遮阳避雨，又像一条丝带把宫廷区、前山和昆明湖串成一线。", "fullText": "好，请随我往西，咱们上长廊。这条廊东起邀月门、西至石丈亭，全长七百二十八米，共二百七十三间，梁枋上绘有一万四千多幅苏式彩画，人物、山水、花鸟、典故几乎没有重样的，一九九零年被列入吉尼斯世界纪录，称为世界最长的画廊。廊中串着四座重檐八角亭，象征春夏秋冬。它不光好看，更是把宫廷区、前山景区和昆明湖连成一条遮阳避雨的动线，这是中国园林里廊用得最讲究的一处。"}, {"step": 5, "chip": "5. 排云殿 & 佛香阁", "title": "排云殿 + 佛香阁（前山中轴 · 全园中心）", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "排云殿：原大报恩延寿寺遗址 · 慈禧做寿受朝贺"}, {"text": "排云出自“神仙排云出”"}, {"text": "佛香阁：八面三层四重檐楼阁（不是木塔！）", "danger": true}, {"text": "全园构图中心：以阁镇山、以山统园"}], "shortOral": "顺长廊走到万寿山中轴抬头看：山脚依山而上的是<b>排云殿</b>，原是乾隆大报恩延寿寺旧址，重建后专门给<b>慈禧太后做寿接受朝贺</b>，名字取自“神仙排云出”。往半山腰看，那座最高大耀眼的建筑是全园构图中心——<b>佛香阁</b>。一定注意别叫成木塔！它是建在巨石台基上的<b>八面、三层、四重檐高阁</b>，站在昆明湖哪个角落都能一眼看见它，讲究的是“<b>以阁镇山、以山统园</b>”。", "fullText": "顺长廊到中轴，抬头看，半山上那座八面三层四重檐的高阁，就是全园的构图中心佛香阁。无论您站在昆明湖哪个角度，视线都会落到它身上，这叫以阁镇山、以山统园。阁下这组依山而上的建筑群是排云殿，原是大报恩延寿寺大雄宝殿的遗址，重建后成为慈禧做寿接受朝贺的地方，排云二字出自神仙排云出，说的是仙境层层而上。"}, {"step": 6, "chip": "6. 智慧海", "title": "智慧海（万寿山顶 · 无梁琉璃佛殿）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "万寿山顶最高处 · 无梁佛殿"}, {"text": "不用一根木梁 · 全靠砖石拱券承重"}, {"text": "外壁满嵌黄绿琉璃与千尊小佛像"}, {"text": "历经 1860、1900 两次大火主体幸存"}], "shortOral": "再往上爬到万寿山顶，眼前这座流光溢彩的建筑叫<b>智慧海</b>，取自佛经“如来智慧如海”。它最大的神奇在于是一座<b>无梁佛殿</b>——整座大殿<b>不用一根木头房梁</b>，全靠<b>砖石拱券</b>互相顶着承重，外墙嵌满黄绿琉璃和上千尊小佛像。正因为没有木结构，1860和1900年两次劫火烧毁全园，唯独它主体幸存下来！", "fullText": "继续往山顶，智慧海是一座无梁佛殿，整座殿不用一根木梁，全靠砖石拱券承重，外壁满嵌黄绿琉璃和上千尊小佛像，智慧海三字出自佛经，说如来智慧如海。它历经两次劫火而主体幸存，靠的正是这身砖石结构。"}, {"step": 7, "chip": "7. 听鹂馆 & 清晏舫", "title": "听鹂馆（听戏）+ 清晏舫（36 米石舫）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "位于前山西侧"}, {"text": "听鹂馆：帝后听戏赐宴（借黄鹂喻戏声）"}, {"text": "清晏舫（石舫）：汉白玉船体约 36 米 · 河清海晏"}, {"text": "重修改西式彩色玻璃舱楼 · 石船永不倾覆"}], "shortOral": "下山往<b>前山西侧</b>走，还有两处精华：一个是<b>听鹂馆</b>，当年帝后听戏、赐宴的地方，借黄鹂鸟鸣比喻戏曲动听，现在是著名的宫廷风味饭庄；再往西到湖边就是大家熟知的石舫——<b>清晏舫</b>，船身用巨大汉白玉雕成、长约<b>36米</b>，重修时上面改成了带彩色玻璃的西式舱楼。“河清海晏”寓意天下太平，石头造的船永不沉没，也暗含“水能载舟”的深意。", "fullText": "前山西侧还有两处别错过。听鹂馆是当年帝后听戏、赐宴的地方，鹂指黄鹂，借鸟鸣喻戏曲声，如今是经营宫廷风味的饭庄。湖边的清晏舫，就是大家常说的石舫，船体用巨大汉白玉雕成，长约三十六米，乾隆年间始建，重修时把上层改成带彩色玻璃窗的西式舱楼。河清海晏，寓意天下太平；石头做的船永不倾覆，也常被读作水能载舟的提醒。"}, {"step": 8, "chip": "8. 昆明湖与收尾", "title": "昆明湖（江南意趣 + 水利功能）+ 世遗收尾", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "西堤仿杭州苏堤 · 十七孔桥石狮 · 南湖岛"}, {"text": "双重身份：皇家园林 + 城市调蓄水库"}, {"text": "1998 年列入世界文化遗产"}], "shortOral": "最后回望烟波浩渺的<b>昆明湖</b>：西堤仿的是杭州西湖苏堤，湖上卧着雕刻百余只石狮的<b>十七孔桥</b>连接南湖岛，乾隆把江南美景完美搬进了北方皇家园林；别忘了它从元代起还兼做北京城的上游调蓄水库。\n各位朋友，从清漪园到颐和园，两度焚毁又两度重生，1998年入选世界文化遗产，这里藏着山水美学，也藏着一部近代史。我的讲解到此结束，谢谢大家！", "fullText": "最后请大家往南望，昆明湖烟波浩渺，西堤仿杭州西湖苏堤，十七孔桥横卧湖上，桥栏石狮形态各异。乾隆把江南搬进了皇家园林，却又不失北方山水的开阔，这正是颐和园最了不起的地方。\n\n各位朋友，从清漪园到颐和园，两度焚毁、两度重生，这座园子藏的不只是湖光山色，还有一部近代史。我的讲解就到这里，谢谢大家，接下来请自由游览，注意集合时间。"}], "audios": ["audio/yiheyuan/step_0.mp3", "audio/yiheyuan/step_1.mp3", "audio/yiheyuan/step_2.mp3", "audio/yiheyuan/step_3.mp3", "audio/yiheyuan/step_4.mp3", "audio/yiheyuan/step_5.mp3", "audio/yiheyuan/step_6.mp3", "audio/yiheyuan/step_7.mp3", "audio/yiheyuan/step_8.mp3"]}, {"id": "changcheng", "name": "长城", "short_name": "5. 长城", "badge": "2026 新增望京石", "slogan": "先讲“三大高峰 + 防御四件套”，再沿 20 公里关沟串起居庸关与八达岭", "ticket_html": "<strong>六、长城：</strong>长城历史沿革（起源、早期代表、历史上的三大修建高峰及各时期的起止点和长度）；长城的基本构造及功能（敌台、墙台、烽火台及烽燧制度）；关沟（名称由来、战略地位及京张铁路）；居庸关（名称由来，历史沿革，云台的建筑特点、文物价值）；八达岭（名称由来、关城匾额、<strong>望京石</strong>、八达岭墙体结构特色）；列入世界文化遗产时间。", "svg": "<svg class=\"spot-map-svg\" viewBox=\"0 0 640 865\" xmlns=\"http://www.w3.org/2000/svg\">\n  \n  <defs>\n    <filter id=\"cardShadow\" x=\"-10%\" y=\"-10%\" width=\"120%\" height=\"125%\">\n      <feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"2.5\" flood-color=\"#2c2419\" flood-opacity=\"0.10\"/>\n    </filter>\n    <filter id=\"activeGlow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">\n      <feDropShadow dx=\"0\" dy=\"0\" stdDeviation=\"4.5\" flood-color=\"#d99a00\" flood-opacity=\"0.55\"/>\n    </filter>\n    <linearGradient id=\"blueTile\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#2e6eb8\"/><stop offset=\"100%\" stop-color=\"#173e6f\"/>\n    </linearGradient>\n    <linearGradient id=\"goldRoof\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#f3c642\"/><stop offset=\"100%\" stop-color=\"#c98c10\"/>\n    </linearGradient>\n    <linearGradient id=\"redWall\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#c83e32\"/><stop offset=\"100%\" stop-color=\"#8f241b\"/>\n    </linearGradient>\n    <linearGradient id=\"lakeBlue\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#d6eaf8\"/><stop offset=\"100%\" stop-color=\"#aed6f1\"/>\n    </linearGradient>\n    <linearGradient id=\"hillGreen\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#7fb084\"/><stop offset=\"100%\" stop-color=\"#527d58\"/>\n    </linearGradient>\n    <radialGradient id=\"marbleGrad\" cx=\"50%\" cy=\"45%\" r=\"55%\">\n      <stop offset=\"0%\" stop-color=\"#ffffff\"/><stop offset=\"100%\" stop-color=\"#e5dfd2\"/>\n    </radialGradient>\n    <marker id=\"arrowRed\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n      <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#b83227\"/>\n    </marker>\n    <marker id=\"arrowBlue\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n      <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#2e6eb8\"/>\n    </marker>\n  </defs>\n\n  <rect x=\"0\" y=\"0\" width=\"640\" height=\"865\" fill=\"#faf6ee\"/>\n  <text x=\"26\" y=\"34\" font-size=\"19\" font-weight=\"700\" fill=\"#1f1b16\">长城（北京段）· 记忆宫殿路线图</text>\n  <text x=\"26\" y=\"54\" font-size=\"12\" fill=\"#6e675e\">一句话：先讲“三大高峰 + 防御四件套”，再沿 20 公里关沟串起居庸关与八达岭</text>\n  \n  <g transform=\"translate(578, 34)\">\n    <circle cx=\"0\" cy=\"0\" r=\"19\" fill=\"#fff\" stroke=\"#d8cfc0\" stroke-width=\"1.2\"/>\n    <polygon points=\"0,-13 4.5,1 0,-2 -4.5,1\" fill=\"#b83227\"/>\n    <polygon points=\"0,13 4.5,1 0,3 -4.5,1\" fill=\"#b7afa1\"/>\n    <text x=\"0\" y=\"-22\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#b83227\">北</text>\n    <text x=\"-26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">西</text>\n    <text x=\"26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">东</text>\n  </g>\n\n\n  <!-- 上半区：20公里关沟峡谷纵深图 -->\n  <rect x=\"28\" y=\"70\" width=\"584\" height=\"456\" rx=\"15\" fill=\"#f2efe6\" stroke=\"#c7beb0\" stroke-width=\"1.6\"/>\n  <!-- 两侧西山山体夹峙 -->\n  <path d=\"M 30 72 L 176 72 L 144 524 L 30 524 Z\" fill=\"#e1eadf\"/>\n  <path d=\"M 610 72 L 464 72 L 496 524 L 610 524 Z\" fill=\"#e1eadf\"/>\n  <text x=\"488\" y=\"92\" font-size=\"10.5\" font-weight=\"700\" fill=\"#276749\" class=\"map-label\">↑ 往张家口 / 蒙古高原</text>\n  <text x=\"498\" y=\"512\" font-size=\"10.5\" font-weight=\"700\" fill=\"#7c7366\" class=\"map-label\">↓ 往北京城（南口）</text>\n\n  <!-- 关沟动线（从南到北） -->\n  <g fill=\"none\" stroke=\"#b83227\" stroke-width=\"2.2\" stroke-dasharray=\"5 3\">\n    <line x1=\"320\" y1=\"478\" x2=\"320\" y2=\"454\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"382\" x2=\"320\" y2=\"354\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"278\" x2=\"320\" y2=\"254\" marker-end=\"url(#arrowRed)\"/>\n    <line x1=\"320\" y1=\"184\" x2=\"320\" y2=\"162\" marker-end=\"url(#arrowRed)\"/>\n  </g>\n\n  <!-- 站 7：八达岭关城 + 望京石（2026新增！最北咽喉） -->\n  <g class=\"map-node\" data-step=\"7\">\n    <rect class=\"hl-ring\" x=\"172\" y=\"84\" width=\"296\" height=\"80\" rx=\"12\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"174\" y=\"86\" width=\"292\" height=\"76\" rx=\"11\" fill=\"#fffaf5\" stroke=\"#b83227\" stroke-width=\"2\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"190\" cy=\"102\" r=\"11\" fill=\"#b83227\"/>\n    <text x=\"190\" y=\"106\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">7</text>\n    <g class=\"map-label\">\n      <text x=\"208\" y=\"106\" font-size=\"13.5\" font-weight=\"800\" fill=\"#9c251c\">八达岭关城（居庸关外围屏障）</text>\n      <text x=\"320\" y=\"124\" text-anchor=\"middle\" font-size=\"10.4\" font-weight=\"700\" fill=\"#1d4e89\">东门“居庸外镇” · 西门“北门锁钥”</text>\n      <rect x=\"192\" y=\"132\" width=\"256\" height=\"23\" rx=\"6\" fill=\"#fdf0ee\" stroke=\"#f0b8b2\"/>\n      <text x=\"320\" y=\"147\" text-anchor=\"middle\" font-size=\"10.2\" font-weight=\"700\" fill=\"#b83227\">★ 2026 新增「望京石」：关外巨花岗岩·晴日望京</text>\n    </g>\n  </g>\n\n  <!-- 站 4：关沟 & 京张铁路（青龙桥人字形线路） -->\n  <g class=\"map-node\" data-step=\"4\">\n    <!-- 左侧关沟总牌 -->\n    <rect class=\"hl-ring\" x=\"38\" y=\"176\" width=\"122\" height=\"114\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"40\" y=\"178\" width=\"118\" height=\"110\" rx=\"10\" fill=\"#ffffff\" stroke=\"#527d58\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"55\" cy=\"193\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"55\" y=\"197\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">4</text>\n    <g class=\"map-label\">\n      <text x=\"72\" y=\"197\" font-size=\"12.5\" font-weight=\"700\" fill=\"#276749\">关沟 20km</text>\n      <text x=\"99\" y=\"218\" text-anchor=\"middle\" font-size=\"10\" fill=\"#332e28\">古称：军都陉</text>\n      <text x=\"99\" y=\"234\" text-anchor=\"middle\" font-size=\"10\" fill=\"#332e28\">太行八陉之一</text>\n      <text x=\"99\" y=\"252\" text-anchor=\"middle\" font-size=\"9.8\" font-weight=\"700\" fill=\"#1d4e89\">两山夹峙·一线中通</text>\n      <text x=\"99\" y=\"270\" text-anchor=\"middle\" font-size=\"9.5\" fill=\"#5e574e\">串起两道重镇</text>\n    </g>\n\n    <!-- 中段：青龙桥京张铁路（人字形可视化！） -->\n    <rect class=\"hl-ring\" x=\"180\" y=\"186\" width=\"280\" height=\"70\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"182\" y=\"188\" width=\"276\" height=\"66\" rx=\"10\" fill=\"#eef6ff\" stroke=\"#2e6eb8\" stroke-width=\"1.6\" filter=\"url(#cardShadow)\"/>\n    <!-- 人字形铁轨剪影 -->\n    <path d=\"M 200 242 L 260 218 L 222 204\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n    <circle cx=\"260\" cy=\"218\" r=\"3.5\" fill=\"#b83227\"/>\n    <g class=\"map-label\">\n      <text x=\"276\" y=\"208\" font-size=\"12.5\" font-weight=\"700\" fill=\"#1d4e89\">青龙桥 · 京张铁路（人字形）</text>\n      <text x=\"276\" y=\"226\" font-size=\"10.2\" fill=\"#332e28\">1905–1909 詹天佑 · 自主第一条干线</text>\n      <text x=\"276\" y=\"242\" font-size=\"9.8\" fill=\"#5e574e\">双机车推拉爬陡坡 · 存车站与铜像</text>\n    </g>\n  </g>\n\n  <!-- 站 5：居庸关 -->\n  <g class=\"map-node\" data-step=\"5\">\n    <rect class=\"hl-ring\" x=\"180\" y=\"280\" width=\"280\" height=\"70\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"182\" y=\"282\" width=\"276\" height=\"66\" rx=\"10\" fill=\"#ffffff\" stroke=\"#b83227\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"198\" cy=\"298\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"198\" y=\"302\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">5</text>\n    <g class=\"map-label\">\n      <text x=\"216\" y=\"302\" font-size=\"13.5\" font-weight=\"700\" fill=\"#9c251c\">居庸关（关沟南段重镇）</text>\n      <text x=\"216\" y=\"321\" font-size=\"10.2\" fill=\"#332e28\">秦“徙居庸徒”得名 · 明大将徐达重建</text>\n      <text x=\"216\" y=\"337\" font-size=\"10\" fill=\"#276749\" font-weight=\"600\">依山跨谷 · 燕京八景“居庸叠翠”</text>\n    </g>\n  </g>\n\n  <!-- 站 6：云台（居庸关城内国宝） -->\n  <g class=\"map-node\" data-step=\"6\">\n    <rect class=\"hl-ring\" x=\"180\" y=\"380\" width=\"280\" height=\"74\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"182\" y=\"382\" width=\"276\" height=\"70\" rx=\"10\" fill=\"#fffdf5\" stroke=\"#c89228\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <!-- 券洞塔座小剪影 -->\n    <g transform=\"translate(200, 404)\">\n      <rect x=\"0\" y=\"6\" width=\"44\" height=\"32\" rx=\"2\" fill=\"#e5dfd2\" stroke=\"#8a7962\" stroke-width=\"1.2\"/>\n      <path d=\"M 14 38 L 14 22 L 22 15 L 30 22 L 30 38 Z\" fill=\"#faf6ee\" stroke=\"#8a7962\"/>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"198\" cy=\"397\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"198\" y=\"401\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">6</text>\n    <g class=\"map-label\">\n      <text x=\"254\" y=\"401\" font-size=\"13\" font-weight=\"700\" fill=\"#8b5a00\">云台（元代过街塔基座）</text>\n      <text x=\"254\" y=\"419\" font-size=\"10.2\" font-weight=\"700\" fill=\"#1d4e89\">券洞六体文字：梵/藏/八思巴/回鹘/西夏/汉</text>\n      <text x=\"254\" y=\"436\" font-size=\"9.8\" fill=\"#4f4840\">原立三白塔 · 雕四大天王与千佛</text>\n    </g>\n  </g>\n\n  <!-- 站 8：八达岭墙体结构特色小卡（右侧空白区） -->\n  <g class=\"map-node\" data-step=\"8\">\n    <rect class=\"hl-ring\" x=\"480\" y=\"254\" width=\"124\" height=\"126\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"482\" y=\"256\" width=\"120\" height=\"122\" rx=\"10\" fill=\"#ffffff\" stroke=\"#7d7263\" stroke-width=\"1.4\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"497\" cy=\"271\" r=\"10\" fill=\"#b83227\"/>\n    <text x=\"497\" y=\"275\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#fff\">8</text>\n    <g class=\"map-label\">\n      <text x=\"513\" y=\"275\" font-size=\"11.5\" font-weight=\"700\" fill=\"#23201c\">墙体工艺</text>\n      <text x=\"542\" y=\"297\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#332e28\">条石奠基</text>\n      <text x=\"542\" y=\"313\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#332e28\">青砖包砌+夯土</text>\n      <text x=\"542\" y=\"329\" text-anchor=\"middle\" font-size=\"9.8\" font-weight=\"700\" fill=\"#1d4e89\">排水沟+吐水嘴</text>\n      <rect x=\"490\" y=\"340\" width=\"104\" height=\"30\" rx=\"6\" fill=\"#fdf0ee\"/>\n      <text x=\"542\" y=\"353\" text-anchor=\"middle\" font-size=\"9.2\" font-weight=\"700\" fill=\"#b83227\">❌ 绝不能讲</text>\n      <text x=\"542\" y=\"366\" text-anchor=\"middle\" font-size=\"9.2\" font-weight=\"700\" fill=\"#b83227\">月球肉眼可见</text>\n    </g>\n  </g>\n\n  <!-- 关沟南端标牌 -->\n  <g class=\"map-label\">\n    <rect x=\"246\" y=\"480\" width=\"148\" height=\"28\" rx=\"7\" fill=\"#5e574e\"/>\n    <text x=\"320\" y=\"498\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">南口（关沟南端入口）</text>\n  </g>\n\n  <!-- 下半区：长城防御四件套彩色剖面放大图 -->\n  <rect x=\"28\" y=\"538\" width=\"584\" height=\"232\" rx=\"15\" fill=\"#ffffff\" stroke=\"#b8ae9c\" stroke-width=\"1.6\" filter=\"url(#cardShadow)\"/>\n  <text x=\"44\" y=\"560\" font-size=\"13\" font-weight=\"800\" fill=\"#1d4e89\">防御体系放大图（长城不是一堵墙，是四件套！）</text>\n\n  <!-- 站 1：城墙本体（垛口+宇墙+马道） -->\n  <g class=\"map-node\" data-step=\"1\">\n    <rect class=\"hl-ring\" x=\"40\" y=\"572\" width=\"196\" height=\"184\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"42\" y=\"574\" width=\"192\" height=\"180\" rx=\"10\" fill=\"#faf6ee\" stroke=\"#d5cbb8\" stroke-width=\"1.2\"/>\n    <!-- 锯齿垛口城墙剪影 -->\n    <g transform=\"translate(56, 616)\">\n      <path d=\"M 0 18 V 0 H 18 V 12 H 32 V 0 H 50 V 12 H 64 V 0 H 82 V 12 H 96 V 0 H 114 V 12 H 128 V 0 H 146 V 18 Z\" fill=\"#9c9385\" stroke=\"#5e574e\"/>\n      <rect x=\"0\" y=\"18\" width=\"146\" height=\"36\" fill=\"#cfc6b4\" stroke=\"#5e574e\"/>\n      <text x=\"73\" y=\"40\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"700\" fill=\"#332e28\">方砖马道（五马并骑）</text>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"56\" cy=\"590\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"56\" y=\"594\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">1</text>\n    <g class=\"map-label\">\n      <text x=\"72\" y=\"594\" font-size=\"12.5\" font-weight=\"700\" fill=\"#23201c\">城墙构造</text>\n      <text x=\"52\" y=\"690\" font-size=\"10.2\" fill=\"#332e28\">• 外侧垛口：瞭望+射孔</text>\n      <text x=\"52\" y=\"708\" font-size=\"10.2\" fill=\"#332e28\">• 内侧宇墙（女儿墙）</text>\n      <text x=\"52\" y=\"726\" font-size=\"10.2\" font-weight=\"700\" fill=\"#1d4e89\">• 墙顶马道：十人并行</text>\n    </g>\n  </g>\n\n  <!-- 站 2：敌台（空心）+ 墙台（实心） -->\n  <g class=\"map-node\" data-step=\"2\">\n    <rect class=\"hl-ring\" x=\"246\" y=\"572\" width=\"186\" height=\"184\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"248\" y=\"574\" width=\"182\" height=\"180\" rx=\"10\" fill=\"#faf6ee\" stroke=\"#d5cbb8\" stroke-width=\"1.2\"/>\n    <!-- 敌台(中空两层带窗) + 墙台(实心) -->\n    <g transform=\"translate(268, 610)\">\n      <rect x=\"4\" y=\"4\" width=\"60\" height=\"54\" fill=\"#d99a8c\" stroke=\"#9c251c\" stroke-width=\"1.4\"/>\n      <rect x=\"14\" y=\"16\" width=\"14\" height=\"14\" fill=\"#fff\" stroke=\"#9c251c\"/>\n      <rect x=\"40\" y=\"16\" width=\"14\" height=\"14\" fill=\"#fff\" stroke=\"#9c251c\"/>\n      <text x=\"34\" y=\"48\" text-anchor=\"middle\" font-size=\"9.5\" font-weight=\"700\" fill=\"#fff\">空心敌台</text>\n      <rect x=\"84\" y=\"24\" width=\"52\" height=\"34\" fill=\"#a89e8e\" stroke=\"#5e574e\" stroke-width=\"1.4\"/>\n      <text x=\"110\" y=\"45\" text-anchor=\"middle\" font-size=\"9.5\" font-weight=\"700\" fill=\"#fff\">实心墙台</text>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"262\" cy=\"590\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"262\" y=\"594\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">2</text>\n    <g class=\"map-label\">\n      <text x=\"278\" y=\"594\" font-size=\"12.5\" font-weight=\"700\" fill=\"#9c251c\">敌台 & 墙台</text>\n      <text x=\"258\" y=\"688\" font-size=\"10.2\" font-weight=\"700\" fill=\"#9c251c\">• 敌台：戚继光创·空心驻兵</text>\n      <text x=\"258\" y=\"706\" font-size=\"10.2\" fill=\"#332e28\">  屯粮存火器、据台固守</text>\n      <text x=\"258\" y=\"726\" font-size=\"10.2\" font-weight=\"700\" fill=\"#1d4e89\">• 墙台(马面)：实心侧射</text>\n    </g>\n  </g>\n\n  <!-- 站 3：烽火台与烽燧制度 -->\n  <g class=\"map-node\" data-step=\"3\">\n    <rect class=\"hl-ring\" x=\"442\" y=\"572\" width=\"158\" height=\"184\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"444\" y=\"574\" width=\"154\" height=\"180\" rx=\"10\" fill=\"#fffaf0\" stroke=\"#e0b872\" stroke-width=\"1.4\"/>\n    <!-- 烽火台冒烟燃火剪影 -->\n    <g transform=\"translate(494, 606)\">\n      <path d=\"M 18 6 Q 26 -2 32 6 Q 38 14 26 20 Q 14 14 18 6 Z\" fill=\"#e65c2e\"/>\n      <circle cx=\"34\" cy=\"2\" r=\"5\" fill=\"#b0b5bc\" opacity=\"0.7\"/>\n      <polygon points=\"10,22 42,22 50,62 2,62\" fill=\"#b89872\" stroke=\"#6b4c00\" stroke-width=\"1.3\"/>\n      <text x=\"26\" y=\"48\" text-anchor=\"middle\" font-size=\"9.5\" font-weight=\"700\" fill=\"#fff\">烽火台</text>\n    </g>\n    <circle class=\"node-num-bg\" cx=\"458\" cy=\"590\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"458\" y=\"594\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">3</text>\n    <g class=\"map-label\">\n      <text x=\"474\" y=\"594\" font-size=\"12.5\" font-weight=\"700\" fill=\"#b85b00\">烽燧制度</text>\n      <text x=\"454\" y=\"688\" font-size=\"10.2\" fill=\"#332e28\">• 独立立于墙外山顶</text>\n      <text x=\"454\" y=\"706\" font-size=\"10.5\" font-weight=\"700\" fill=\"#b83227\">• 昼燃烟曰燧·夜举火曰烽</text>\n      <text x=\"454\" y=\"726\" font-size=\"10\" fill=\"#1d4e89\" font-weight=\"600\">• 硫磺硝石鸣炮·一昼夜千里</text>\n    </g>\n  </g>\n\n  <!-- 站 0：底部三大修建高峰横幅 -->\n  <g class=\"map-node\" data-step=\"0\">\n    <rect class=\"hl-ring\" x=\"28\" y=\"782\" width=\"584\" height=\"68\" rx=\"13\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"30\" y=\"784\" width=\"580\" height=\"64\" rx=\"12\" fill=\"#1d4e89\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"54\" cy=\"816\" r=\"13\" fill=\"#f3c642\"/>\n    <text x=\"54\" y=\"821\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"800\" fill=\"#1f1b16\">0</text>\n    <g class=\"map-label\">\n      <text x=\"78\" y=\"809\" font-size=\"13\" font-weight=\"700\" fill=\"#ffffff\">开场沿革：西周烽火 → 战国齐长城/楚方城（绝不是秦始皇始建！）· 1987 世遗</text>\n      <text x=\"78\" y=\"831\" font-size=\"11.2\" fill=\"#ffe6a3\">三大高峰：① 秦(临洮-辽东)  ② 汉(最长·至玉门关西)  ③ 明(虎山-嘉峪关约8800km)</text>\n    </g>\n  </g>\n</svg>", "stations": [{"step": 0, "chip": "0. 起源与三大高峰", "title": "开场 + 历史沿革（起源 · 秦汉明三大高峰）", "time": "约 2 分钟", "isNew": false, "anchors": [{"text": "不是秦始皇始建！西周烽火 → 战国齐长城/楚方城", "danger": true}, {"text": "秦：蒙恬连缀（临洮 → 辽东）"}, {"text": "汉：史上最长（护丝路 · 玉门关以西）"}, {"text": "明：现存砖石主体（虎山 → 嘉峪关约 8800 公里）· 1987 世遗"}], "shortOral": "各位朋友大家好，欢迎来到<b>八达岭长城</b>！它是明长城保存最完好的一段，<b>1987年</b>长城列入世界文化遗产。先纠个错：<b>长城不是秦始皇最早修的</b>！雏形在<b>西周</b>（烽火戏诸侯），春秋战国最早的代表是<b>齐长城和楚方城</b>。历史上有<b>三次修建高峰</b>：第一是<b>秦</b>，蒙恬连缀旧墙，西起<b>临洮</b>、东至<b>辽东</b>；第二是<b>汉</b>，为护丝绸之路延到<b>玉门关以西</b>，历史上最长；第三是<b>明</b>，东起鸭绿江<b>虎山</b>、西到<b>嘉峪关</b>约<b>8800公里</b>，今天看到的砖石长城基本都是明代修的。", "fullText": "各位游客朋友们，大家好！欢迎来到八达岭长城。我是今天的导游。咱们脚下这段墙，是明代长城里保存最好、也最有代表性的一段，一九八七年，长城被列入世界文化遗产名录。\n\n登高之前，先把两千多年的来龙去脉说清楚。长城不是一道墙，也不是一朝一代修成的。它的雏形可以追溯到西周，烽火戏诸侯的故事就发生在烽火报警的背景下；春秋战国时，各诸侯国为互相防守各自筑墙，齐长城和楚国的方城，是公认最早的代表。\n\n真正形成规模的，是历史上的三次修建高峰。第一次是秦。秦始皇统一六国后，派蒙恬北击匈奴，把原来秦、赵、燕三国的北边长城连缀扩充，西起临洮、东至辽东，才有了万里长城这个名字。第二次是汉。汉代为了护卫河西走廊和丝绸之路，把长城向西一直延伸到玉门关以西，东西跨度超过一万里，是历史上最长的一次。第三次就是明。咱们今天看到的砖石长城，绝大多数是明代修的，东起鸭绿江畔的虎山，西到甘肃嘉峪关，全长约八千八百公里，前后修了二百多年。北京这一段，属于明长城蓟镇和宣府镇防区，拱卫的是京师，所以用料最讲究、工事最密集。"}, {"step": 1, "chip": "1. 墙体构造（马道/垛口）", "title": "城墙基本构造（垛口 · 宇墙 · 马道）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "外侧：垛口（上瞭望口 + 下射孔）"}, {"text": "内侧：矮宇墙 / 女儿墙（防人马跌落）"}, {"text": "墙顶：方砖马道（宽处五马并骑、十人并行）"}], "shortOral": "长城绝不只是一堵墙，而是一整套立体防御系统！先看脚下<b>城墙本身</b>：朝外敌方一侧是凹凸不平的<b>垛口</b>，上面瞭望、下面射孔放箭开铳；朝内侧是较矮的<b>宇墙（女儿墙）</b>，防止自家士兵掉下去；墙顶铺着平整方砖，宽处能<b>五马并骑、十人并行</b>，说白了就是山脊上的军用高速公路，运兵送粮极快。", "fullText": "那长城到底怎么打仗？请顺着我的手看墙体外面。它不是单纯一堵墙，而是一整套防御系统。墙身外侧有高低相间的垛口，垛口上部的瞭望口用来观察敌情、下部的射孔用来放箭开铳；内侧是较矮的宇墙，也叫女儿墙，防止人马失足。墙顶用方砖铺墁，宽处可以五马并骑、十人并行，兵力和物资能沿着墙顶快速调动。"}, {"step": 2, "chip": "2. 敌台 & 墙台", "title": "空心敌台（戚继光）+ 实心墙台（马面）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "敌台（空心）：戚继光镇蓟州创制 · 驻兵屯粮存火器"}, {"text": "墙台（实心/马面）：外突平台 · 侧射墙根死角"}, {"text": "区分口诀：敌台空心住人，墙台实心侧射"}], "shortOral": "沿着城墙每隔一段就能看到两种台子，记住口诀“<b>敌台空心住人，墙台实心侧射</b>”：高出墙身、上下两层的是<b>空心敌台</b>，明代抗倭名将<b>戚继光</b>镇守蓟州时创制，里面能驻兵、囤粮、放火器，打仗时据台固守；另一种低矮向外突出的是实心<b>墙台（马面）</b>，专门用来从侧面射击已经摸到墙根死角的敌人。", "fullText": "每隔一段，向外突出一座实心台子，叫墙台，也叫马面，用来侧射贴近墙根的敌人。再往外，还有高出墙身的空心敌台，这是明代戚继光镇守蓟州时创制的，内部中空，可以驻兵、屯粮、存放火器，士兵遇警能据台固守。"}, {"step": 3, "chip": "3. 烽火台与烽燧制度", "title": "烽火台与烽燧制度（昼燧夜烽 · 千里传警）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "独立建在墙外山顶制高点"}, {"text": "昼燃烟曰“燧”，夜举火曰“烽”"}, {"text": "明代加硫磺硝石助燃 + 鸣炮示警 · 一昼夜传千里"}], "shortOral": "看山顶高处那些独立在城墙外面的高墩，就是古代的“军事通信基站”——<b>烽火台</b>。它的报警规矩叫<b>烽燧制度</b>：<b>白天点浓烟叫“燧”，晚上点明火叫“烽”</b>；明代还往里加硫磺、硝石助燃，再配合放炮声数报敌军人数，一台接一台，<b>一昼夜就能把军情传出上千里</b>！", "fullText": "独立于墙体之外、立在山顶高处的，是烽火台。一旦发现敌情，白天燃烟叫燧，夜里举火叫烽，明代还配上硫磺、硝石助燃并鸣炮示警，一台接一台，一昼夜能把军情传出千里。敌台、墙台、烽火台加烽燧制度，这才是长城真正的构造逻辑。"}, {"step": 4, "chip": "4. 关沟 & 京张铁路", "title": "关沟（军都陉 20 公里）+ 詹天佑京张铁路", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "两山夹峙一线中通 · 长约 20 公里 · 串起居庸关与八达岭"}, {"text": "古称军都陉（太行八陉之一）· 通张家口与蒙古高原"}, {"text": "京张铁路：1905–1909 詹天佑 · 自主设计施工第一条干线"}, {"text": "青龙桥“人字形”线路克服陡坡 · 存车站与铜像"}], "shortOral": "现在咱们把镜头拉到脚下这条山谷——<b>关沟</b>。两山夹峙、一线中通，长约<b>20公里</b>，古称<b>军都陉</b>（太行八陉之一），是北京往西北去张家口和蒙古高原的必经咽喉，一条沟里串着<b>居庸关和八达岭</b>两道重镇。近代这里还诞生了中国铁路史奇迹：<b>1905到1909年</b>，<b>詹天佑</b>主持修成中国人自行设计施工的第一条干线——<b>京张铁路</b>，他在青龙桥发明了天才的“<b>人字形</b>”线路爬陡坡，山下至今留着青龙桥车站和詹天佑铜像。", "fullText": "咱们现在所在的位置，叫关沟。两山夹峙、一线中通，长约二十公里，古称军都陉，是太行八陉之一，也是北京通往张家口和蒙古高原的必经咽喉，所以历朝都在这里层层设关，沟里串着居庸关和八达岭两道重镇。到了近代，这条沟又多了一层身份：一九零五年到一九零九年，詹天佑主持修成京张铁路，这是中国人自行设计、自行施工的第一条干线铁路，青龙桥那一截人字形线路，就是为克服关沟的陡坡想出来的办法。山下至今还留着车站和铜像。"}, {"step": 5, "chip": "5. 居庸关", "title": "居庸关（徙居庸徒 · 徐达重建）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "关沟南段重镇（八达岭在它北边当外哨）", "danger": true}, {"text": "名称由来：秦代“徙居庸徒”迁居服役佣工囚徒"}, {"text": "明代大将徐达重建关城 · 依山跨谷 · 居庸叠翠"}], "shortOral": "顺着关沟往南是名震天下的<b>居庸关</b>。名字由来很有意思：秦始皇修长城时，把服役的佣工和囚徒迁到这儿居住，叫“<b>徙居庸徒</b>”，简称居庸。后来明代开国大将<b>徐达</b>在这儿重建关城，形成今天依山跨谷的雄伟格局，四周峰峦叠翠，也是燕京八景里的“居庸叠翠”。", "fullText": "顺沟往南是居庸关。这个名字相传来自秦代，秦始皇修长城时把服役的佣工、囚徒迁居到这一带，叫徙居庸徒，后来简称居庸。明代大将徐达在此重建关城，形成今天依山跨谷的规模，燕京八景里的居庸叠翠说的就是这儿。"}, {"step": 6, "chip": "6. 云台", "title": "居庸关云台（元代过街塔座 · 六体文字）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "元代过街塔基座（原立三座白塔，塔毁台存）"}, {"text": "券洞六体文字：梵、藏、八思巴、回鹘、西夏、汉"}, {"text": "雕刻四大天王与千佛 · 元代石雕与多民族文字实物珍品"}], "shortOral": "居庸关城里藏着一件国宝级文物——<b>云台</b>。它原本是<b>元代过街塔的基座</b>，台顶原本立着三座白色喇嘛塔，后来塔毁了只留基座。它之所以价值极高，是因为券洞内壁上刻着<b>六种古文字</b>的经咒（<b>梵文、藏文、八思巴文、回鹘文、西夏文和汉文</b>），两侧还精雕四大天王与千佛，是研究元代石雕和多民族文字的第一手国宝实物！", "fullText": "关城中最珍贵的是云台，它原是元代过街塔的基座，台上曾立三座白色喇嘛塔，后来塔毁台存。云台券洞内壁上，用梵文、藏文、八思巴文、回鹘文、西夏文和汉文六种文字刻着经咒与造塔功德记，两侧雕四大天王和千佛，是研究元代石雕和多民族文字的第一手实物，价值极高。"}, {"step": 7, "chip": "7. 八达岭 & 望京石", "title": "八达岭关城匾额 + 望京石（2026 新增）", "time": "约 1.5 分钟", "isNew": true, "anchors": [{"text": "名称由来：路从此分，四通八达 · 居庸关外围屏障"}, {"text": "东门匾额“居庸外镇” · 西门匾额“北门锁钥”"}, {"text": "望京石（2026 新增！）：关城外巨型花岗岩", "danger": true}, {"text": "相传晴日望京城 · 亦传慈禧西行回銮驻足"}], "shortOral": "回到关沟北口的<b>八达岭</b>，名字出自“<b>路从此分，四通八达</b>”，它是居庸关的外围第一道屏障。关城两方匾额一听就懂它的地位：东门题“<b>居庸外镇</b>”，西门题“<b>北门锁钥</b>”，意思就是锁住北京北大门的那把大锁！关城外还有一块巨大花岗岩叫<b>望京石</b>（2026必讲点）：相传大晴天站上去能远远望见北京城，也传慈禧回銮时曾在这儿驻足回望，给冷峻关隘添了人情味。", "fullText": "回到八达岭。这个名字，古书里说得明白，路从此分，四通八达，故名八达岭；它居高临下，是居庸关的外围屏障。关城东西各有一座门，东门额题居庸外镇，意思是这里是居庸关之外的重镇；西门额题北门锁钥，把八达岭比作北京北大门上的那把锁。两方匾额，把关城的战略地位说得再清楚不过。\n\n关城外有一块巨大的花岗岩石，叫望京石。相传天气极晴朗时，站上去能远远望见北京城，因此得名；也有说是清末慈禧西行回銮时曾在此驻足回望。石头本身不起眼，可它站在了这条咽喉古道的节点上，就成了这一段最有人情味的景致。"}, {"step": 8, "chip": "8. 八达岭墙体特色与收尾", "title": "八达岭墙体结构特色 + 辟谣与世遗收尾", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "条石奠基 + 青砖包砌 + 中填碎石夯土 + 顶铺方砖"}, {"text": "自带排水沟 + 吐水嘴（防雨水泡软墙心）"}, {"text": "绝不能讲“月球肉眼可见长城”！", "danger": true}, {"text": "1987 年世界文化遗产"}], "shortOral": "最后看看脚下八达岭墙体有多扎实：底下用大<b>条石奠基</b>，外皮用<b>青砖包砌</b>，中间填<b>碎石夯土</b>，顶上铺方砖，还贴心修了<b>排水沟和吐水嘴</b>防止雨水泡塌墙心，这才挺过四百年风雨。提醒一句，所谓“月球肉眼能看见长城”早被辟谣了，咱绝不能讲！\n各位朋友，1987年长城入选世界文化遗产，它修的是一整套安全秩序，更是民族精神地标。不到长城非好汉，我的讲解到此结束，谢谢大家！", "fullText": "最后说说您脚下的墙体结构。八达岭这段以条石奠基，青砖包砌到顶，中间填碎石和夯土，墙顶再铺方砖，层层咬合；墙上还设排水沟和吐水嘴，避免雨水泡软墙心。正因为这套做法扎实，四百多年风雨之后，它还能让咱们完整走一遭。\n\n这里也要澄清一个流传很广的说法：说在月球上能用肉眼看见长城，其实是不准确的，咱们做讲解的，宁可少一个噱头，也别讲一句经不起追问的话。\n\n各位朋友，从西周的烽火，到秦的连缀、汉的延伸、明的砖石，长城修了两千多年，修的不是一堵墙，是一整套关于安全的秩序。今天它不再用来御敌，却成了中国人共同的精神地标。我的讲解就到这里，接下来请大家自由登城，注意脚下、量力而行，我们按老规矩，不到长城非好汉。"}], "audios": ["audio/changcheng/step_0.mp3", "audio/changcheng/step_1.mp3", "audio/changcheng/step_2.mp3", "audio/changcheng/step_3.mp3", "audio/changcheng/step_4.mp3", "audio/changcheng/step_5.mp3", "audio/changcheng/step_6.mp3", "audio/changcheng/step_7.mp3", "audio/changcheng/step_8.mp3"]}, {"id": "shisanling", "name": "明十三陵", "short_name": "6. 明十三陵", "badge": "2026 新增万历生平", "slogan": "一条总神道统摄 13 座“前方后圆”陵，重点讲透长陵与定陵地宫", "ticket_html": "<strong>五、明十三陵：</strong>明十三陵概况及历史沿革（陵区的位置、建筑布局及各陵寝名称，明代帝陵的建筑规制，明朝未葬入十三陵的皇帝，长陵的卜陵选址及营造、建陵原因）；长陵（永乐皇帝生平、祾恩殿的建筑特点及功能）；定陵（<strong>万历皇帝生平</strong>、发掘过程、地宫布局及陈设、金井玉葬）；列入世界文化遗产的时间。", "svg": "<svg class=\"spot-map-svg\" viewBox=\"0 0 640 865\" xmlns=\"http://www.w3.org/2000/svg\">\n  \n  <defs>\n    <filter id=\"cardShadow\" x=\"-10%\" y=\"-10%\" width=\"120%\" height=\"125%\">\n      <feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"2.5\" flood-color=\"#2c2419\" flood-opacity=\"0.10\"/>\n    </filter>\n    <filter id=\"activeGlow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">\n      <feDropShadow dx=\"0\" dy=\"0\" stdDeviation=\"4.5\" flood-color=\"#d99a00\" flood-opacity=\"0.55\"/>\n    </filter>\n    <linearGradient id=\"blueTile\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#2e6eb8\"/><stop offset=\"100%\" stop-color=\"#173e6f\"/>\n    </linearGradient>\n    <linearGradient id=\"goldRoof\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#f3c642\"/><stop offset=\"100%\" stop-color=\"#c98c10\"/>\n    </linearGradient>\n    <linearGradient id=\"redWall\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#c83e32\"/><stop offset=\"100%\" stop-color=\"#8f241b\"/>\n    </linearGradient>\n    <linearGradient id=\"lakeBlue\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#d6eaf8\"/><stop offset=\"100%\" stop-color=\"#aed6f1\"/>\n    </linearGradient>\n    <linearGradient id=\"hillGreen\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#7fb084\"/><stop offset=\"100%\" stop-color=\"#527d58\"/>\n    </linearGradient>\n    <radialGradient id=\"marbleGrad\" cx=\"50%\" cy=\"45%\" r=\"55%\">\n      <stop offset=\"0%\" stop-color=\"#ffffff\"/><stop offset=\"100%\" stop-color=\"#e5dfd2\"/>\n    </radialGradient>\n    <marker id=\"arrowRed\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n      <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#b83227\"/>\n    </marker>\n    <marker id=\"arrowBlue\" viewBox=\"0 0 10 10\" refX=\"7\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\">\n      <path d=\"M 0 1.5 L 8.5 5 L 0 8.5 z\" fill=\"#2e6eb8\"/>\n    </marker>\n  </defs>\n\n  <rect x=\"0\" y=\"0\" width=\"640\" height=\"865\" fill=\"#faf6ee\"/>\n  <text x=\"26\" y=\"34\" font-size=\"19\" font-weight=\"700\" fill=\"#1f1b16\">明十三陵 · 记忆宫殿路线图</text>\n  <text x=\"26\" y=\"54\" font-size=\"12\" fill=\"#6e675e\">一句话：一条总神道统摄 13 座“前方后圆”陵，重点讲透长陵 + 定陵地宫</text>\n  \n  <g transform=\"translate(578, 34)\">\n    <circle cx=\"0\" cy=\"0\" r=\"19\" fill=\"#fff\" stroke=\"#d8cfc0\" stroke-width=\"1.2\"/>\n    <polygon points=\"0,-13 4.5,1 0,-2 -4.5,1\" fill=\"#b83227\"/>\n    <polygon points=\"0,13 4.5,1 0,3 -4.5,1\" fill=\"#b7afa1\"/>\n    <text x=\"0\" y=\"-22\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#b83227\">北</text>\n    <text x=\"-26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">西</text>\n    <text x=\"26\" y=\"4\" text-anchor=\"middle\" font-size=\"10\" fill=\"#6e675e\">东</text>\n  </g>\n\n\n  <!-- 上半区：天寿山盆地与总神道总图 -->\n  <rect x=\"28\" y=\"70\" width=\"584\" height=\"440\" rx=\"15\" fill=\"#f4f1e8\" stroke=\"#c7beb0\" stroke-width=\"1.6\"/>\n  <!-- 北倚天寿山弧形绿山 -->\n  <path d=\"M 34 210 Q 90 80 320 76 Q 550 80 606 210 L 606 130 Q 320 94 34 130 Z\" fill=\"#dce9da\"/>\n  <!-- 南临温榆河蓝带 -->\n  <path d=\"M 34 484 Q 320 502 606 484 L 606 504 Q 320 518 34 504 Z\" fill=\"#aed6f1\"/>\n  <text x=\"482\" y=\"498\" font-size=\"10\" font-weight=\"700\" fill=\"#1d4e89\" class=\"map-label\">温榆河（背山面水）</text>\n\n  <!-- 站 1：天寿山选址 -->\n  <g class=\"map-node\" data-step=\"1\">\n    <rect class=\"hl-ring\" x=\"190\" y=\"78\" width=\"260\" height=\"48\" rx=\"10\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"192\" y=\"80\" width=\"256\" height=\"44\" rx=\"9\" fill=\"#eef7f0\" stroke=\"#527d58\" stroke-width=\"1.4\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"208\" cy=\"102\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"208\" y=\"106\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">1</text>\n    <g class=\"map-label\">\n      <text x=\"328\" y=\"98\" text-anchor=\"middle\" font-size=\"12.5\" font-weight=\"700\" fill=\"#276749\">⛰️ 天寿山选址（1409 永乐七年）</text>\n      <text x=\"328\" y=\"115\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#332e28\">廖均卿择黄土山 · 环抱 + 近京便祭 + 天子守边</text>\n    </g>\n  </g>\n\n  <!-- 13 陵弧线分布提示（站 3） -->\n  <g class=\"map-node\" data-step=\"3\">\n    <rect class=\"hl-ring\" x=\"38\" y=\"138\" width=\"154\" height=\"122\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"40\" y=\"140\" width=\"150\" height=\"118\" rx=\"10\" fill=\"#ffffff\" stroke=\"#8a7962\" stroke-width=\"1.4\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"55\" cy=\"155\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"55\" y=\"159\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">3</text>\n    <g class=\"map-label\">\n      <text x=\"122\" y=\"159\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#23201c\">13 陵名 & 规制</text>\n      <text x=\"115\" y=\"180\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"700\" fill=\"#1d4e89\">长献景裕茂</text>\n      <text x=\"115\" y=\"195\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"700\" fill=\"#1d4e89\">泰康永昭定 · 庆德思</text>\n      <line x1=\"50\" y1=\"204\" x2=\"180\" y2=\"204\" stroke=\"#e4ddd0\"/>\n      <text x=\"115\" y=\"221\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#b83227\">统一规制：前方后圆</text>\n      <text x=\"115\" y=\"238\" text-anchor=\"middle\" font-size=\"9.4\" fill=\"#4f4840\">祾恩门殿 → 明楼 → 宝顶</text>\n      <text x=\"115\" y=\"251\" text-anchor=\"middle\" font-size=\"9.2\" fill=\"#6e675e\">（皇宫的地下镜像）</text>\n    </g>\n  </g>\n\n  <!-- 站 2：明 16 帝缺哪 3 位（右上角红框高亮！） -->\n  <g class=\"map-node\" data-step=\"2\">\n    <rect class=\"hl-ring\" x=\"454\" y=\"138\" width=\"148\" height=\"122\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"456\" y=\"140\" width=\"144\" height=\"118\" rx=\"10\" fill=\"#fdf0ee\" stroke=\"#d89289\" stroke-width=\"1.5\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"471\" cy=\"155\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"471\" y=\"159\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">2</text>\n    <g class=\"map-label\">\n      <text x=\"536\" y=\"159\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"800\" fill=\"#9c251c\">16 帝缺哪 3 位？</text>\n      <text x=\"466\" y=\"182\" font-size=\"10\" fill=\"#332e28\">① 朱元璋：南京孝陵</text>\n      <text x=\"466\" y=\"200\" font-size=\"10\" fill=\"#332e28\">② 建文帝：下落不明</text>\n      <text x=\"466\" y=\"218\" font-size=\"10\" fill=\"#332e28\">③ 景泰帝：西郊金山</text>\n      <line x1=\"466\" y1=\"228\" x2=\"590\" y2=\"228\" stroke=\"#f0c4be\"/>\n      <text x=\"528\" y=\"245\" text-anchor=\"middle\" font-size=\"9.6\" font-weight=\"700\" fill=\"#1d4e89\">崇祯思陵算在 13 之内!</text>\n    </g>\n  </g>\n\n  <!-- 站 4 & 5：长陵（正中 C 位！朱棣生平 + 祾恩殿） -->\n  <g class=\"map-node\" data-step=\"4\">\n    <rect class=\"hl-ring\" x=\"206\" y=\"140\" width=\"234\" height=\"62\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"208\" y=\"142\" width=\"230\" height=\"58\" rx=\"10\" fill=\"#fffdf5\" stroke=\"#c89228\" stroke-width=\"1.6\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"223\" cy=\"157\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"223\" y=\"161\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">4</text>\n    <g class=\"map-label\">\n      <text x=\"330\" y=\"159\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"800\" fill=\"#9c251c\">长陵 · 明成祖朱棣（最大最早）</text>\n      <text x=\"323\" y=\"177\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#332e28\">燕王靖难 · 迁都/紫禁城/永乐大典</text>\n      <text x=\"323\" y=\"191\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#1d4e89\" font-weight=\"600\">郑和七下西洋 · 五征漠北 · 逝榆木川</text>\n    </g>\n  </g>\n\n  <g class=\"map-node\" data-step=\"5\">\n    <rect class=\"hl-ring\" x=\"206\" y=\"210\" width=\"234\" height=\"68\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"208\" y=\"212\" width=\"230\" height=\"64\" rx=\"10\" fill=\"#fffaf0\" stroke=\"#c98c10\" stroke-width=\"1.8\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"223\" cy=\"227\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"223\" y=\"231\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">5</text>\n    <g class=\"map-label\">\n      <text x=\"330\" y=\"229\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"800\" fill=\"#8b5a00\">长陵核心：祾(léng)恩殿</text>\n      <text x=\"323\" y=\"247\" text-anchor=\"middle\" font-size=\"10.2\" font-weight=\"700\" fill=\"#b83227\">60 根整根金丝楠木巨柱！</text>\n      <text x=\"323\" y=\"264\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#332e28\">面阔9间·重檐庑殿(同太和殿) · 感恩受福</text>\n    </g>\n  </g>\n\n  <!-- 站 6：定陵（长陵西南=左下！万历生平 2026 新增） -->\n  <g class=\"map-node\" data-step=\"6\">\n    <rect class=\"hl-ring\" x=\"38\" y=\"286\" width=\"186\" height=\"118\" rx=\"12\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"40\" y=\"288\" width=\"182\" height=\"114\" rx=\"11\" fill=\"#fdf0ee\" stroke=\"#b83227\" stroke-width=\"2\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"55\" cy=\"303\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"55\" y=\"307\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">6</text>\n    <g class=\"map-label\">\n      <text x=\"136\" y=\"307\" text-anchor=\"middle\" font-size=\"12.5\" font-weight=\"800\" fill=\"#9c251c\">定陵 · 万历生平</text>\n      <text x=\"131\" y=\"325\" text-anchor=\"middle\" font-size=\"9.8\" font-weight=\"700\" fill=\"#b83227\">★ 2026 新增必讲</text>\n      <text x=\"131\" y=\"343\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#332e28\">10岁登基 · 张居正一条鞭法</text>\n      <text x=\"131\" y=\"359\" text-anchor=\"middle\" font-size=\"9.8\" fill=\"#332e28\">在位48年最久 · 耗银800万两</text>\n      <text x=\"131\" y=\"377\" text-anchor=\"middle\" font-size=\"9.8\" font-weight=\"700\" fill=\"#1d4e89\">1956试掘·1957开地宫</text>\n      <text x=\"131\" y=\"393\" text-anchor=\"middle\" font-size=\"9.4\" fill=\"#6b4c00\">此后确立不主动发掘原则</text>\n    </g>\n    <!-- 指向下方定陵地宫剖面图的虚线 -->\n    <line x1=\"131\" y1=\"402\" x2=\"131\" y2=\"528\" stroke=\"#b83227\" stroke-width=\"2.2\" stroke-dasharray=\"5 3\" marker-end=\"url(#arrowRed)\"/>\n  </g>\n\n  <!-- 站 0 关联总神道（从南到北直通长陵） -->\n  <g class=\"map-node\" data-step=\"0\">\n    <rect x=\"292\" y=\"294\" width=\"56\" height=\"176\" rx=\"8\" fill=\"#efe4d0\" stroke=\"#c89228\" stroke-width=\"1.4\"/>\n    <line x1=\"320\" y1=\"464\" x2=\"320\" y2=\"282\" stroke=\"#b83227\" stroke-width=\"2\" stroke-dasharray=\"5 3\" marker-end=\"url(#arrowRed)\"/>\n    <g class=\"map-label\" text-anchor=\"middle\" font-size=\"9.5\" font-weight=\"700\" fill=\"#6b4c00\">\n      <rect x=\"296\" y=\"302\" width=\"48\" height=\"17\" rx=\"4\" fill=\"#fbf5e8\"/>\n      <text x=\"320\" y=\"314\">龙凤门</text>\n      <rect x=\"296\" y=\"343\" width=\"48\" height=\"45\" rx=\"4\" fill=\"#fbf5e8\"/>\n      <text x=\"320\" y=\"356\">18对</text>\n      <text x=\"320\" y=\"370\">石像生</text>\n      <text x=\"320\" y=\"383\" font-size=\"8.5\">(一站一卧)</text>\n      <rect x=\"296\" y=\"404\" width=\"48\" height=\"17\" rx=\"4\" fill=\"#fbf5e8\"/>\n      <text x=\"320\" y=\"416\">碑亭</text>\n      <rect x=\"296\" y=\"426\" width=\"48\" height=\"17\" rx=\"4\" fill=\"#fbf5e8\"/>\n      <text x=\"320\" y=\"438\">大红门</text>\n      <rect x=\"296\" y=\"448\" width=\"48\" height=\"17\" rx=\"4\" fill=\"#fbf5e8\"/>\n      <text x=\"320\" y=\"460\">石牌坊</text>\n    </g>\n  </g>\n\n  <!-- 站 8：思陵与总结角标（右下） -->\n  <g class=\"map-node\" data-step=\"8\">\n    <rect class=\"hl-ring\" x=\"424\" y=\"330\" width=\"176\" height=\"106\" rx=\"11\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"426\" y=\"332\" width=\"172\" height=\"102\" rx=\"10\" fill=\"#ffffff\" stroke=\"#7d7263\" stroke-width=\"1.4\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"441\" cy=\"347\" r=\"10.5\" fill=\"#b83227\"/>\n    <text x=\"441\" y=\"351\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"700\" fill=\"#fff\">8</text>\n    <g class=\"map-label\">\n      <text x=\"516\" y=\"351\" text-anchor=\"middle\" font-size=\"12\" font-weight=\"700\" fill=\"#23201c\">思陵 & 价值升华</text>\n      <text x=\"512\" y=\"374\" text-anchor=\"middle\" font-size=\"10\" fill=\"#332e28\">1409 长陵 → 崇祯思陵</text>\n      <text x=\"512\" y=\"394\" text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"700\" fill=\"#1d4e89\">一部“躺下来的明史”</text>\n      <text x=\"512\" y=\"416\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"700\" fill=\"#276749\">2003 列入世界文化遗产</text>\n    </g>\n  </g>\n\n  <!-- 下半区：站 7 定陵地下 27 米地宫解剖图（极具画面记忆力！） -->\n  <g class=\"map-node\" data-step=\"7\">\n    <rect class=\"hl-ring\" x=\"26\" y=\"528\" width=\"588\" height=\"240\" rx=\"15\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"28\" y=\"530\" width=\"584\" height=\"236\" rx=\"14\" fill=\"#232b36\" stroke=\"#4f637a\" stroke-width=\"2\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"50\" cy=\"552\" r=\"11.5\" fill=\"#f3c642\"/>\n    <text x=\"50\" y=\"556\" text-anchor=\"middle\" font-size=\"11.5\" font-weight=\"800\" fill=\"#1f1b16\">7</text>\n    <text x=\"70\" y=\"556\" font-size=\"13.5\" font-weight=\"700\" fill=\"#f3c642\" class=\"map-label\">定陵地宫解剖图（地下 27 米 · 1000+㎡ · 巨石起拱无梁无柱）</text>\n\n    <!-- 地宫五座石殿示意（从左到右：入口石门自来石 -> 前殿 -> 中殿[左右配殿] -> 后殿主室） -->\n    <!-- 入口石门 + 自来石 -->\n    <rect x=\"46\" y=\"616\" width=\"84\" height=\"66\" rx=\"8\" fill=\"#323e4d\" stroke=\"#85a4c4\" stroke-width=\"1.4\"/>\n    <g class=\"map-label\" text-anchor=\"middle\">\n      <text x=\"88\" y=\"638\" font-size=\"11\" font-weight=\"700\" fill=\"#ffffff\">汉白玉石门</text>\n      <text x=\"88\" y=\"656\" font-size=\"10\" font-weight=\"700\" fill=\"#f3c642\">+ 自来石</text>\n      <text x=\"88\" y=\"672\" font-size=\"9\" fill=\"#cbd5e1\">背后斜顶机关</text>\n    </g>\n    <line x1=\"132\" y1=\"649\" x2=\"152\" y2=\"649\" stroke=\"#f3c642\" stroke-width=\"2\" marker-end=\"url(#arrowRed)\"/>\n\n    <!-- 前殿 -->\n    <rect x=\"156\" y=\"616\" width=\"66\" height=\"66\" rx=\"8\" fill=\"#323e4d\" stroke=\"#85a4c4\" stroke-width=\"1.4\"/>\n    <text x=\"189\" y=\"653\" text-anchor=\"middle\" font-size=\"11.5\" font-weight=\"700\" fill=\"#ffffff\" class=\"map-label\">前殿</text>\n    <line x1=\"224\" y1=\"649\" x2=\"244\" y2=\"649\" stroke=\"#f3c642\" stroke-width=\"2\"/>\n\n    <!-- 左配殿（上） & 右配殿（下） -->\n    <rect x=\"266\" y=\"572\" width=\"90\" height=\"30\" rx=\"6\" fill=\"#2c3746\" stroke=\"#6c87a4\"/>\n    <text x=\"311\" y=\"591\" text-anchor=\"middle\" font-size=\"10.5\" fill=\"#d9e8fa\" class=\"map-label\">左配殿</text>\n    <line x1=\"311\" y1=\"602\" x2=\"311\" y2=\"614\" stroke=\"#6c87a4\" stroke-width=\"1.5\"/>\n\n    <rect x=\"266\" y=\"696\" width=\"90\" height=\"30\" rx=\"6\" fill=\"#2c3746\" stroke=\"#6c87a4\"/>\n    <text x=\"311\" y=\"715\" text-anchor=\"middle\" font-size=\"10.5\" fill=\"#d9e8fa\" class=\"map-label\">右配殿</text>\n    <line x1=\"311\" y1=\"684\" x2=\"311\" y2=\"696\" stroke=\"#6c87a4\" stroke-width=\"1.5\"/>\n\n    <!-- 中殿 -->\n    <rect x=\"248\" y=\"614\" width=\"126\" height=\"70\" rx=\"8\" fill=\"#36485e\" stroke=\"#f3c642\" stroke-width=\"1.6\"/>\n    <g class=\"map-label\" text-anchor=\"middle\">\n      <text x=\"311\" y=\"635\" font-size=\"12\" font-weight=\"700\" fill=\"#f3c642\">中殿</text>\n      <text x=\"311\" y=\"654\" font-size=\"10\" fill=\"#ffffff\">3 汉白玉宝座</text>\n      <text x=\"311\" y=\"671\" font-size=\"9.6\" fill=\"#cde0f8\">琉璃五供 + 长明灯</text>\n    </g>\n    <line x1=\"376\" y1=\"649\" x2=\"396\" y2=\"649\" stroke=\"#f3c642\" stroke-width=\"2\"/>\n\n    <!-- 后殿主室（棺椁 + 金井玉葬） -->\n    <rect x=\"400\" y=\"582\" width=\"194\" height=\"134\" rx=\"10\" fill=\"#3d2c2e\" stroke=\"#e07a5f\" stroke-width=\"1.8\"/>\n    <g class=\"map-label\" text-anchor=\"middle\">\n      <text x=\"497\" y=\"604\" font-size=\"12.5\" font-weight=\"800\" fill=\"#ffd166\">后殿主室（核心）</text>\n      <text x=\"497\" y=\"625\" font-size=\"10.2\" fill=\"#ffffff\">万历 + 两皇后三具棺椁</text>\n      <text x=\"497\" y=\"643\" font-size=\"10\" fill=\"#f8d7da\">26 只朱漆随葬木箱</text>\n      <rect x=\"414\" y=\"654\" width=\"166\" height=\"48\" rx=\"7\" fill=\"#523724\" stroke=\"#f3c642\"/>\n      <text x=\"497\" y=\"673\" font-size=\"10.8\" font-weight=\"800\" fill=\"#f3c642\">★ 金井玉葬（棺床孔置玉+五谷）</text>\n      <text x=\"497\" y=\"692\" font-size=\"9.8\" fill=\"#ffffff\">出土 3000+件：金丝翼善冠/凤冠</text>\n    </g>\n\n    <text x=\"320\" y=\"752\" text-anchor=\"middle\" font-size=\"10.2\" fill=\"#cbd5e1\" class=\"map-label\">记忆动线：自来石门 → 前殿 → 中殿（三座五供长明灯）→ 后殿（三棺 + 金井玉葬 + 冠）</text>\n  </g>\n\n  <!-- 站 0：底部概况与神道横幅 -->\n  <g class=\"map-node\" data-step=\"0\">\n    <rect class=\"hl-ring\" x=\"28\" y=\"782\" width=\"584\" height=\"68\" rx=\"13\" fill=\"none\" stroke=\"#1d4e89\" stroke-width=\"3.5\" filter=\"url(#activeGlow)\"/>\n    <rect x=\"30\" y=\"784\" width=\"580\" height=\"64\" rx=\"12\" fill=\"#1d4e89\" filter=\"url(#cardShadow)\"/>\n    <circle class=\"node-num-bg\" cx=\"54\" cy=\"816\" r=\"13\" fill=\"#f3c642\"/>\n    <text x=\"54\" y=\"821\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"800\" fill=\"#1f1b16\">0</text>\n    <g class=\"map-label\">\n      <text x=\"78\" y=\"809\" font-size=\"13.2\" font-weight=\"700\" fill=\"#ffffff\">开场概况：昌平天寿山南麓 · 40平方公里 · 中国帝陵独有“共用一条总神道”</text>\n      <text x=\"78\" y=\"831\" font-size=\"11.2\" fill=\"#d9e8fa\">总神道：石牌坊(5间6柱11楼) → 大红门 → 碑亭 → 18对石像生(一站一卧) → 龙凤门 ｜ 2003 世遗</text>\n    </g>\n  </g>\n</svg>", "stations": [{"step": 0, "chip": "0. 概况与总神道", "title": "开场 + 陵区格局与独一无二的总神道", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "昌平天寿山南麓 · 约 40 平方公里 · 2003 世遗"}, {"text": "北倚天寿山、南临温榆河（背山面水）"}, {"text": "中国帝陵独有：13 陵共用一条总神道"}, {"text": "石牌坊(5间6柱11楼)→大红门→碑亭→18对石像生(一站一卧)→龙凤门"}], "shortOral": "各位朋友大家好，欢迎来到北京昌平天寿山南麓的<b>明十三陵</b>，<b>2003年</b>作为明清皇家陵寝扩展项目列入世界文化遗产。陵区占地约<b>40平方公里</b>，北靠天寿山、南临温榆河，三面环山背山面水。这里有个中国帝陵里独一份的设计——<b>十三座皇陵共用一条总神道</b>！从南往北依次是：五间六柱十一楼的<b>石牌坊</b>、正门<b>大红门</b>、<b>碑亭</b>、<b>18对石像生</b>（6种瑞兽+文武勋臣，一对站一对卧象征仪仗），最后过<b>龙凤门</b>。", "fullText": "各位游客朋友们，大家好！欢迎来到明十三陵。我是今天的导游。咱们现在站在北京昌平天寿山南麓，眼前这片群山环抱的盆地，埋着明朝迁都北京以后的十三位皇帝。二零零三年，它作为明清皇家陵寝的扩展项目，被列入世界文化遗产名录。\n\n先说格局。整个陵区约四十平方公里，北面天寿山作屏障，东、西、南三面山势回环，温榆河从前面流过，是典型的背山面水、藏风聚气。十三座陵各自依山而建，共用一条总神道，也就是长陵神道。从南往北走，依次是五间六柱十一楼的石牌坊、大红门、碑亭、神道两侧的石像生，再到龙凤门。石像生一共十八对，狮、獬豸、骆驼、象、麒麟、马各两对，武臣、文臣、勋臣各两对，一对站一对卧，象征帝王生前的仪仗。一条神道统摄十三座陵，这种共用神道的做法，在中国帝陵里是独有的。"}, {"step": 1, "chip": "1. 卜陵选址与建陵原因", "title": "长陵卜陵选址与营造（1409 永乐七年）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "1409 年（永乐七年）朱棣派廖均卿等择地"}, {"text": "原名黄土山 → 赐名“天寿山”"}, {"text": "三理由：山势环抱 + 近京畿便祭祀 + 天子守边"}], "shortOral": "为什么皇陵选在这儿？<b>1409年（永乐七年）</b>朱棣准备迁都北京，派风水师<b>廖均卿</b>等四处勘察，选中昌平这片黄土山，赐名<b>天寿山</b>。选它有三个硬理由：一是三面环山、地形绝佳；二是紧挨京城，方便后代祭祀；三是呼应朱棣“<b>天子守边</b>”的战略布局。从1409年长陵动工到最后崇祯葬入思陵，延续了两百多年。", "fullText": "为什么会选在这儿？明永乐七年，朱棣决定迁都北京，派礼部官员和风水师廖均卿等人四处择地，最后看中昌平这片黄土山，赐名天寿山。选它有三个理由：一是山势完整、三面环抱，符合依山为陵的传统；二是紧邻京畿，便于后代四时祭祀；三是天子守边、陵寝在京北，也和迁都的整体布局相配。从这年营建长陵起，到最后崇祯葬入思陵，前后延续两百多年。"}, {"step": 2, "chip": "2. 16帝缺哪3位", "title": "明朝未葬入十三陵的 3 位皇帝（高频必问）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "明朝 16 帝，16 - 3 = 13 位在此", "danger": true}, {"text": "缺①：开国朱元璋（葬南京明孝陵）"}, {"text": "缺②：建文帝朱允炆（靖难后下落不明）"}, {"text": "缺③：景泰帝朱祁钰（葬北京西郊金山）· 崇祯算在13内"}], "shortOral": "游客最爱问：明朝16位皇帝，怎么只有13座陵？缺的三位记清楚：第一，开国皇帝<b>朱元璋</b>葬在<b>南京明孝陵</b>；第二，<b>建文帝</b>靖难之役后<b>下落不明</b>，没有陵；第三，<b>景泰帝</b>因英宗复辟被废，以亲王礼葬在北京西郊<b>金山</b>。16减3正好13！特别提醒：末代<b>崇祯皇帝</b>葬在最南边的<b>思陵</b>，他是算在这13座里面的。", "fullText": "有的朋友会问，明朝十六位皇帝，怎么只有十三座陵？缺的三位分别是：开国的朱元璋葬在南京孝陵；建文帝靖难之后下落不明，没有陵寝；景泰帝朱祁钰因英宗复辟被废，以亲王礼葬在北京西郊金山，虽然后来恢复帝号，也没有迁进陵区。十六减三，正好十三。崇祯皇帝自缢后葬在原来的田贵妃墓里，就是陵区最南边的思陵，所以他是算在这十三座之内的。这一点常被说混，咱们今天一次说清楚。"}, {"step": 3, "chip": "3. 十三陵名与帝陵规制", "title": "各陵名称 + “前方后圆”帝陵统一规制", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "13陵名：长献景裕茂，泰康永昭定，庆德思"}, {"text": "统一规制：前方后圆（陵墓是宫殿的镜像）"}, {"text": "前：祾恩门 → 祾恩殿（享殿祭祀）"}, {"text": "后：明楼 → 宝城宝顶（底下即地宫）"}], "shortOral": "十三座陵名拆成三句顺口溜：<b>长献景裕茂、泰康永昭定、庆德思</b>。每座陵长啥样？记住“<b>前方后圆</b>”四个字就通了，它就是生前皇宫的地下镜像：前面方形院落是<b>祾恩门、祾恩殿</b>（相当于前朝，供祭祀用）；后面圆形是<b>明楼、宝城和宝顶</b>，大土堆宝顶底下就是埋棺材的<b>地宫</b>。今天咱们重点看两座：最早最大的长陵，和唯一发掘过的定陵。", "fullText": "十三座陵沿山势依次是：长陵、献陵、景陵、裕陵、茂陵、泰陵、康陵、永陵、昭陵、定陵、庆陵、德陵、思陵。每座陵的规制大体一致，都是前方后圆：前面是祾恩门、祾恩殿组成的祭祀院落，后面是明楼、宝城、宝顶，宝顶之下就是地宫；只是规模大小随国力和在位时间而有差别。今天咱们重点看两座，一座最早的长陵，一座唯一发掘过的定陵。"}, {"step": 4, "chip": "4. 长陵 · 朱棣生平", "title": "长陵 · 永乐皇帝朱棣生平", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "明太祖第四子 · 封燕王 · 靖难即位（年号永乐）"}, {"text": "五大功绩：迁都北京 + 建紫禁城 + 永乐大典 + 郑和七下西洋 + 五征漠北"}, {"text": "病逝于榆木川"}], "shortOral": "先走进位于陵区正中、规模最大的<b>长陵</b>，墓主人是<b>明成祖朱棣</b>。他是朱元璋第四个儿子，早年封燕王守北平，靠“<b>靖难之役</b>”当上皇帝，年号永乐。他在位干了五件惊天动地的大事：<b>迁都北京、建紫禁城、编《永乐大典》、派郑和七下西洋、五次亲征漠北</b>，最后病逝在征途上的<b>榆木川</b>。可以说今天北京城的底子，就是他打下的。", "fullText": "请随我进长陵。它的主人是明成祖朱棣，明太祖第四子，早年封燕王驻守北平，通过靖难之役即位，年号永乐。他在位期间迁都北京、营建紫禁城、命人编纂永乐大典、派郑和七下西洋，又五次亲征漠北，最后病逝于榆木川。可以说，北京今天这座城的底子，就是他打下的。"}, {"step": 5, "chip": "5. 长陵 · 祾恩殿", "title": "长陵核心 · 祾恩殿（60 根整根金丝楠木）", "time": "约 1 分钟", "isNew": false, "anchors": [{"text": "读音注意：祾(léng)恩殿（感恩受福）", "danger": true}, {"text": "面阔 9 间、进深 5 间 · 重檐庑殿顶（同太和殿等级）"}, {"text": "60 根整根金丝楠木巨柱 · 全国现存最大最完整楠木大殿"}, {"text": "功能：供奉帝后神位、举行隆重祭祀"}], "shortOral": "长陵最震撼的是它的核心享殿——<b>祾（léng）恩殿</b>，“祾恩”意思是感恩受福，专门用来供奉帝后神位、举行大祭。它<b>面阔9间、进深5间，重檐庑殿顶</b>，规格和故宫太和殿平起平坐！进殿抬头看，撑起大殿的是<b>60根整根金丝楠木巨柱</b>，最粗的两人合抱都围不过来，是全国现存规模最大、保存最完整的楠木大殿。", "fullText": "长陵的核心建筑是祾恩殿。请您进殿抬头：它面阔九间、进深五间，重檐庑殿顶，等级和故宫太和殿相同；殿内不用一根普通木料，全靠六十根整根金丝楠木巨柱支撑，中间几根两人合抱都围不拢，是全国现存规模最大、保存最完整的楠木大殿。祾恩二字，取感恩受福之意，这里是供奉帝后神位、举行隆重祭祀的地方，殿外还有焚帛炉、配殿和明楼。站在殿里，能直观感到明代皇家祭礼的分量。"}, {"step": 6, "chip": "6. 定陵 · 万历生平与发掘", "title": "定陵 · 万历皇帝生平（2026新增）+ 1956 发掘转折", "time": "约 1.5 分钟", "isNew": true, "anchors": [{"text": "万历朱翊钧（2026 新增必讲！）：10岁登基 · 张居正一条鞭法", "danger": true}, {"text": "在位 48 年明代最久 · 后期不上朝 · 建陵 6 年耗银 800 万两"}, {"text": "1956 试掘 · 1957 找金刚墙开地宫（唯一主动发掘帝陵）"}, {"text": "转折意义：此后国家确立“不主动发掘帝王陵”原则"}], "shortOral": "接着咱们去长陵西南方的<b>定陵</b>，墓主人是<b>明神宗万历皇帝朱翊钧</b>（2026必讲点）：他<b>10岁登基</b>，前期靠名相<b>张居正推行一条鞭法</b>一度中兴，在位整整<b>48年</b>是明朝在位最久的皇帝，可后期多年不上朝，还花了<b>6年、800万两白银</b>给自己修这座豪华陵墓。定陵最大的特殊在于它是迄今<b>唯一经国家批准主动发掘的帝王陵</b>：<b>1956年</b>试掘、<b>1957年</b>找到金刚墙打开地宫；也是因为这次发掘后文物保护的教训，国家正式确立了“<b>不再主动发掘帝王陵</b>”的原则。", "fullText": "接下来咱们去定陵。墓主人是明神宗万历皇帝朱翊钧，十岁登基，前期由张居正辅政、推行一条鞭法，在位四十八年，是明代在位最久的皇帝，后期多年不上朝。他的陵墓从万历十二年开始营建，历时六年，耗银八百万两。\n\n定陵之所以特殊，因为它是迄今唯一一座经国家批准、主动发掘的帝王陵。一九五六年五月开始试掘，一九五七年找到金刚墙、打开地宫，此后国家确立了不主动发掘帝王陵的原则，所以这份实物资料格外珍贵。"}, {"step": 7, "chip": "7. 定陵地宫与金井玉葬", "title": "定陵地宫（地下 27 米五石殿 · 自来石 · 金井玉葬）", "time": "约 1.5 分钟", "isNew": false, "anchors": [{"text": "地下 27 米 · 1000 多㎡ · 前中后左右五座无梁石殿"}, {"text": "入口：汉白玉石门 + 背后斜顶“自来石”"}, {"text": "中殿：三宝座+五供+长明灯 · 后殿：三棺椁+26朱漆箱"}, {"text": "金井玉葬（棺床孔置玉料五谷）· 出土 3000+件（金丝翼善冠/凤冠）"}], "shortOral": "走下<b>地下27米</b>，就进了定陵地宫！一千多平米分成<b>前、中、后、左、右五座石殿</b>，全用巨石起拱、无梁无柱。入口两扇汉白玉石门背后，靠一根机关巨石“<b>自来石</b>”顶死。<b>中殿</b>摆着三张汉白玉宝座、琉璃五供和长明灯；<b>后殿</b>停放万历与两位皇后的三具棺椁和26只随葬红漆箱。棺床正中挖了个小孔叫<b>金井</b>，里面放玉料和五谷象征接通地气，这就是“<b>金井玉葬</b>”。这里出土了<b>3000多件国宝</b>，最绝的就是皇帝的<b>金丝翼善冠</b>和皇后的<b>凤冠</b>！", "fullText": "地宫在地面以下约二十七米，总面积一千多平方米，由前、中、后、左、右五座石殿组成，全部用巨石起拱，无梁无柱。入口处两扇汉白玉石门，背后用一根自来石斜顶着，当年考古人员正是想办法挪开它才进入地宫。中殿设三个汉白玉宝座，前设琉璃五供和长明灯；后殿是主室，正中棺床上并列停放万历皇帝与孝端皇后、孝靖皇后的棺椁，两侧摆着二十六只朱漆木箱随葬品。棺床正中留有一孔，叫金井，内置玉料、五谷，取接通地气、护佑亡者之意，这种葬式就是常说的金井玉葬。地宫共出土三千多件文物，最著名的是金丝翼善冠、嵌珍珠宝石的凤冠、青花瓷器与成匹的织金锦，把晚明工艺水平摆在了咱们眼前。"}, {"step": 8, "chip": "8. 总结与世遗收尾", "title": "一部躺下来的明史 + 2003 世遗收尾", "time": "约 0.5 分钟", "isNew": false, "anchors": [{"text": "1409 长陵起 → 崇祯思陵止（200 余年）"}, {"text": "2003 年列入世界文化遗产"}, {"text": "金句升华：十三座陵 = 一部躺下来的明史"}], "shortOral": "各位朋友，从1409年朱棣选下天寿山建长陵，到最后崇祯草草葬入思陵，这两百多年其实是一部“<b>躺下来的明史</b>”：前期的开阔、中期的奢靡、末世的仓皇，全刻在陵寝的规模里。<b>2003年</b>明十三陵列入世界文化遗产，它不只是地下宫殿，更是一个王朝的起落见证。我的讲解到此结束，谢谢大家！", "fullText": "各位朋友，从永乐七年选下天寿山，到崇祯草草葬入思陵，十三座陵其实是一部躺下来的明史：前期的开阔、中期的奢靡、末世的仓皇，都写在陵的规模里。今天咱们看的不只是地下宫殿，更是一个王朝两百多年的起落。\n\n明十三陵的讲解就到这里，谢谢大家。接下来请自由参观，我们按约定时间在门口集合。"}], "audios": ["audio/shisanling/step_0.mp3", "audio/shisanling/step_1.mp3", "audio/shisanling/step_2.mp3", "audio/shisanling/step_3.mp3", "audio/shisanling/step_4.mp3", "audio/shisanling/step_5.mp3", "audio/shisanling/step_6.mp3", "audio/shisanling/step_7.mp3", "audio/shisanling/step_8.mp3"]}];
+const STORAGE_KEY = "daokao_oral_all6_done_v3";
+
+let doneMap = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+let currentSpotIdx = 0;
+let activeStep = 0;
+let isPlaying = false;
+let currentRate = 1.0;
+let autoNextTimer = null;
+
+const audioEl = document.getElementById("voicePlayer");
+const playMainBtn = document.getElementById("playMainBtn");
+const guideNowTitle = document.getElementById("guideNowTitle");
+const guideTime = document.getElementById("guideTime");
+const seekSlider = document.getElementById("seekSlider");
+const autoNextToggle = document.getElementById("autoNextToggle");
+
+function getSpot() { return SPOTS[currentSpotIdx]; }
+function getDoneSet(spotId) { return new Set(doneMap[spotId] || []); }
+function saveDoneSet(spotId, setObj) {
+  doneMap[spotId] = [...setObj];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(doneMap));
+}
+
+function fmtTime(sec) {
+  if (!isFinite(sec) || sec < 0) return "00:00";
+  const m = String(Math.floor(sec / 60)).padStart(2, "0");
+  const s = String(Math.floor(sec % 60)).padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+function clearAutoNext() {
+  if (autoNextTimer) { clearTimeout(autoNextTimer); autoNextTimer = null; }
+}
+
+function stopAudio() {
+  clearAutoNext();
+  audioEl.pause();
+  audioEl.removeAttribute("src");
+  audioEl.dataset.loadedKey = "";
+  isPlaying = false;
+  seekSlider.value = 0;
+  guideTime.textContent = "00:00 / 00:00";
+}
+
+function renderTabs() {
+  const tabsEl = document.getElementById("spotTabs");
+  tabsEl.innerHTML = "";
+  SPOTS.forEach((sp, i) => {
+    const dset = getDoneSet(sp.id);
+    const total = sp.stations.length;
+    const btn = document.createElement("button");
+    btn.className = "spot-tab" + (i === currentSpotIdx ? " active" : "") + (dset.size >= total ? " all-done" : "");
+    btn.innerHTML = `${sp.short_name} <span class="tab-dot">${dset.size}/${total}</span>`;
+    btn.onclick = () => switchSpot(i);
+    tabsEl.appendChild(btn);
+  });
+
+  const dice = document.createElement("button");
+  dice.className = "dice-btn";
+  dice.textContent = "🎲 随机抽签";
+  dice.title = "模拟机考随机抽 1 个景点";
+  dice.onclick = () => {
+    let nxt = Math.floor(Math.random() * SPOTS.length);
+    if (nxt === currentSpotIdx && SPOTS.length > 1) nxt = (nxt + 1) % SPOTS.length;
+    switchSpot(nxt);
+  };
+  tabsEl.appendChild(dice);
+}
+
+function switchSpot(idx) {
+  stopAudio();
+  currentSpotIdx = idx;
+  activeStep = 0;
+  const sp = getSpot();
+  if (location.hash !== `#${sp.id}`) {
+    history.replaceState(null, "", `#${sp.id}`);
+  }
+  renderSpot();
+  document.getElementById("rightCol").scrollTo({ top: 0, behavior: "auto" });
+}
+
+function renderSpot() {
+  const sp = getSpot();
+  const dset = getDoneSet(sp.id);
+  renderTabs();
+
+  // 注入当前景点 SVG 地图并绑定节点点击事件
+  const svgWrap = document.getElementById("svgWrap");
+  svgWrap.innerHTML = sp.svg;
+  svgWrap.querySelectorAll(".map-node").forEach(node => {
+    node.addEventListener("click", () => {
+      const step = Number(node.dataset.step);
+      playFromStep(step, true);
+    });
+  });
+
+  // 官方题签
+  document.getElementById("ticketTitle").textContent = `📋 2026 北京机考屏幕原题签 · ${sp.name}（${sp.badge}）`;
+  document.getElementById("ticketText").innerHTML = sp.ticket_html;
+
+  const chipsEl = document.getElementById("ticketChips");
+  const listEl = document.getElementById("cardsList");
+  chipsEl.innerHTML = "";
+  listEl.innerHTML = "";
+
+  document.getElementById("allFullSummary").textContent = `📖 完整对照文本（${sp.name} · 约 1,600 字完整原讲稿全文，想通读时再展开）`;
+  document.getElementById("allFullText").textContent = sp.stations.map(s => `【${s.title}】\n${s.fullText}`).join("\n\n");
+  document.getElementById("allFullDetails").open = false;
+
+  sp.stations.forEach(st => {
+    const chip = document.createElement("button");
+    chip.className = "t-chip" + (dset.has(st.step) ? " done" : "") + (activeStep === st.step ? " active" : "");
+    chip.textContent = st.chip;
+    chip.dataset.step = st.step;
+    chip.onclick = () => playFromStep(st.step, true);
+    chipsEl.appendChild(chip);
+
+    const card = document.createElement("article");
+    card.className = "station-card" + (dset.has(st.step) ? " done" : "") + (activeStep === st.step ? " active" : "");
+    card.id = `card-${st.step}`;
+    card.dataset.step = st.step;
+
+    const anchorsHtml = st.anchors.map(a =>
+      `<span class="anchor-pill ${a.danger ? "danger" : ""}">${a.danger ? "⚠️ " : ""}${a.text}</span>`
+    ).join("");
+
+    card.innerHTML = `
+      <div class="card-audio-bar" id="bar-${st.step}"></div>
+      <div class="card-header" onclick="selectStep(${st.step}, false)">
+        <div class="card-title-wrap">
+          <span class="step-badge">${st.step}</span>
+          <span class="card-title">${st.title}</span>
+          ${st.isNew ? '<span class="tag-new">2026 重点/新增</span>' : ''}
+          <span class="tag-time">${st.time}</span>
+        </div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="mini-btn play-step-btn" id="speak-${st.step}" onclick="toggleStepPlay(${st.step})">🔊 从这站听</button>
+          <button class="mini-btn ${dset.has(st.step) ? "checked" : ""}" onclick="toggleDone(${st.step})">
+            ${dset.has(st.step) ? "✓ 已顺嘴" : "标为顺嘴"}
+          </button>
+        </div>
+      </div>
+
+      <div class="peek-bar">
+        <button class="peek-btn" onclick="togglePeek(${st.step}, 'anchor')">👁 偷看锚点提示</button>
+        <button class="peek-btn" onclick="togglePeek(${st.step}, 'oral')">💬 偷看简洁口述</button>
+      </div>
+
+      <div class="anchor-box" id="anchor-${st.step}">${anchorsHtml}</div>
+
+      <div class="short-oral" id="oral-${st.step}">
+        <div class="short-oral-label">
+          <span>🗣️ 简洁大白话口述（晓晓音频同步这一段）</span>
+          <span>跟着听 · 跟着顺</span>
+        </div>
+        <p>${st.shortOral.replace(/\n/g, "<br>")}</p>
+      </div>
+
+      <div class="full-wrap" id="full-${st.step}">
+        <details>
+          <summary>📄 完整原讲稿对照（本段 1,600 字版原文）</summary>
+          <div class="full-text">${st.fullText}</div>
+        </details>
+      </div>
+    `;
+    listEl.appendChild(card);
+  });
+
+  guideNowTitle.textContent = `准备就绪（${sp.name}）：点黄色按钮，晓晓带你从 0 站听到 ${sp.stations.length - 1} 站`;
+  syncVisualStates();
+}
+
+function syncVisualStates() {
+  const sp = getSpot();
+  const dset = getDoneSet(sp.id);
+
+  document.getElementById("progressPill").textContent = `已过 ${dset.size} / ${sp.stations.length} 站`;
+  document.body.classList.toggle("is-playing", isPlaying);
+
+  playMainBtn.classList.toggle("playing", isPlaying);
+  playMainBtn.textContent = isPlaying
+    ? `⏸ 暂停（正在听第 ${activeStep} 站）`
+    : (audioEl.dataset.loadedKey === `${sp.id}:${activeStep}` && audioEl.currentTime > 0 && !audioEl.ended
+        ? `▶ 继续听第 ${activeStep} 站`
+        : "▶ 从头带我听一遍");
+
+  document.querySelectorAll(".t-chip").forEach(el => {
+    const step = Number(el.dataset.step);
+    el.classList.toggle("active", step === activeStep);
+    el.classList.toggle("done", dset.has(step));
+  });
+
+  document.querySelectorAll(".station-card").forEach(el => {
+    const step = Number(el.dataset.step);
+    el.classList.toggle("active", step === activeStep);
+    el.classList.toggle("done", dset.has(step));
+    const btn = document.getElementById(`speak-${step}`);
+    if (btn) {
+      const activeHere = isPlaying && step === activeStep;
+      btn.classList.toggle("speaking", activeHere);
+      btn.textContent = activeHere ? "⏸ 正在播…" : "🔊 从这站听";
+    }
+    if (step !== activeStep) {
+      const bar = document.getElementById(`bar-${step}`);
+      if (bar) bar.style.width = "0%";
+    }
+  });
+
+  document.querySelectorAll("#svgWrap .map-node").forEach(el => {
+    const step = Number(el.dataset.step);
+    el.classList.toggle("active", step === activeStep);
+    el.classList.toggle("done", dset.has(step));
+  });
+}
+
+function selectStep(step, scrollCard) {
+  activeStep = step;
+  syncVisualStates();
+  if (scrollCard) {
+    const card = document.getElementById(`card-${step}`);
+    const container = document.getElementById("rightCol");
+    if (card && container && window.innerWidth > 960) {
+      const targetTop = card.offsetTop - container.offsetTop - 16;
+      container.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+    } else if (card) {
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+}
+
+function playFromStep(step, scrollCard = true) {
+  clearAutoNext();
+  const sp = getSpot();
+  activeStep = step;
+  const st = sp.stations[step];
+  const key = `${sp.id}:${step}`;
+  if (audioEl.dataset.loadedKey !== key) {
+    audioEl.src = sp.audios[step];
+    audioEl.dataset.loadedKey = key;
+  } else {
+    audioEl.currentTime = 0;
+  }
+  audioEl.playbackRate = currentRate;
+  guideNowTitle.textContent = `🔊 ${sp.name} · 第 ${step} 站：${st.title}`;
+  selectStep(step, scrollCard);
+
+  const p = audioEl.play();
+  if (p && p.then) {
+    p.then(() => { isPlaying = true; syncVisualStates(); })
+     .catch(err => { console.error(err); isPlaying = false; syncVisualStates(); });
+  }
+}
+
+function toggleStepPlay(step) {
+  clearAutoNext();
+  const sp = getSpot();
+  const key = `${sp.id}:${step}`;
+  if (isPlaying && activeStep === step) {
+    audioEl.pause();
+    isPlaying = false;
+    syncVisualStates();
+  } else if (!isPlaying && activeStep === step && audioEl.dataset.loadedKey === key && audioEl.currentTime > 0 && !audioEl.ended) {
+    audioEl.playbackRate = currentRate;
+    audioEl.play();
+    isPlaying = true;
+    syncVisualStates();
+  } else {
+    playFromStep(step, true);
+  }
+}
+
+playMainBtn.addEventListener("click", () => {
+  clearAutoNext();
+  const sp = getSpot();
+  const key = `${sp.id}:${activeStep}`;
+  if (isPlaying) {
+    audioEl.pause();
+    isPlaying = false;
+    syncVisualStates();
+  } else if (audioEl.dataset.loadedKey === key && audioEl.currentTime > 0 && !audioEl.ended) {
+    audioEl.playbackRate = currentRate;
+    audioEl.play();
+    isPlaying = true;
+    syncVisualStates();
+  } else {
+    const startIdx = (activeStep === sp.stations.length - 1 && audioEl.ended) ? 0 : activeStep;
+    playFromStep(startIdx, true);
+  }
+});
+
+document.getElementById("prevStepBtn").addEventListener("click", () => {
+  playFromStep(Math.max(0, activeStep - 1), true);
+});
+document.getElementById("nextStepBtn").addEventListener("click", () => {
+  const sp = getSpot();
+  playFromStep(Math.min(sp.stations.length - 1, activeStep + 1), true);
+});
+
+audioEl.addEventListener("timeupdate", () => {
+  const cur = audioEl.currentTime || 0;
+  const dur = audioEl.duration || 0;
+  guideTime.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
+  if (dur > 0) {
+    const pct = (cur / dur) * 100;
+    seekSlider.value = pct;
+    const bar = document.getElementById(`bar-${activeStep}`);
+    if (bar) bar.style.width = `${pct}%`;
+  }
+});
+
+seekSlider.addEventListener("input", () => {
+  const dur = audioEl.duration || 0;
+  if (dur > 0) audioEl.currentTime = (Number(seekSlider.value) / 100) * dur;
+});
+
+audioEl.addEventListener("ended", () => {
+  const sp = getSpot();
+  const dset = getDoneSet(sp.id);
+  dset.add(activeStep);
+  saveDoneSet(sp.id, dset);
+  renderTabs();
+  const bar = document.getElementById(`bar-${activeStep}`);
+  if (bar) bar.style.width = "100%";
+
+  if (autoNextToggle.checked && activeStep < sp.stations.length - 1) {
+    const next = activeStep + 1;
+    guideNowTitle.textContent = `✅ 第 ${activeStep} 站听完，1.2 秒后自动进入第 ${next} 站…`;
+    syncVisualStates();
+    autoNextTimer = setTimeout(() => { playFromStep(next, true); }, 1200);
+  } else {
+    isPlaying = false;
+    guideNowTitle.textContent = activeStep === sp.stations.length - 1
+      ? `🎉 ${sp.name} 全部 ${sp.stations.length} 站听完！现在可以切到「② 提词练嘴」自己开口顺一遍`
+      : `✅ 第 ${activeStep} 站播放完毕`;
+    syncVisualStates();
+  }
+});
+
+document.querySelectorAll(".speed-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    currentRate = Number(btn.dataset.rate);
+    audioEl.playbackRate = currentRate;
+    document.querySelectorAll(".speed-btn").forEach(b => b.classList.toggle("active", b === btn));
+  });
+});
+
+function toggleDone(step) {
+  const sp = getSpot();
+  const dset = getDoneSet(sp.id);
+  if (dset.has(step)) dset.delete(step);
+  else dset.add(step);
+  saveDoneSet(sp.id, dset);
+  renderSpot();
+}
+
+function togglePeek(step, type) {
+  if (type === "anchor") document.getElementById(`anchor-${step}`).classList.toggle("peek");
+  else document.getElementById(`oral-${step}`).classList.toggle("peek");
+}
+
+const blindToggle = document.getElementById("blindMapToggle");
+blindToggle.addEventListener("change", () => {
+  document.getElementById("mapPanel").classList.toggle("blind-map", blindToggle.checked);
+});
+
+function toggleMobileMap() {
+  const panel = document.getElementById("mapPanel");
+  const btn = document.getElementById("mobileMapToggle");
+  const collapsed = panel.classList.toggle("collapsed");
+  btn.textContent = collapsed ? "🗺️ 展开图" : "🗺️ 收起图";
+}
+
+document.querySelectorAll(".mode-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const mode = btn.dataset.mode;
+    document.body.className = `mode-${mode}` + (isPlaying ? " is-playing" : "");
+    document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll(".peek").forEach(el => el.classList.remove("peek"));
+    if (mode === "exam") {
+      blindToggle.checked = true;
+      document.getElementById("mapPanel").classList.add("blind-map");
+    } else if (mode === "learn") {
+      blindToggle.checked = false;
+      document.getElementById("mapPanel").classList.remove("blind-map");
+    }
+  });
+});
+
+// 13分钟倒计时
+const TOTAL_SEC = 13 * 60;
+let remainSec = TOTAL_SEC;
+let timerId = null;
+
+function updateTimerUI() {
+  const disp = document.getElementById("timerDisplay");
+  const abs = Math.abs(remainSec);
+  const m = String(Math.floor(abs / 60)).padStart(2, "0");
+  const s = String(abs % 60).padStart(2, "0");
+  disp.textContent = (remainSec < 0 ? "-" : "") + `${m}:${s}`;
+  disp.className = "timer-display";
+  if (remainSec <= 0) disp.classList.add("over");
+  else if (remainSec <= 60) disp.classList.add("warn");
+  else if (remainSec <= 180) disp.classList.add("good");
+}
+
+document.getElementById("timerToggle").addEventListener("click", function() {
+  if (timerId) {
+    clearInterval(timerId);
+    timerId = null;
+    this.textContent = "继续";
+  } else {
+    timerId = setInterval(() => { remainSec--; updateTimerUI(); }, 1000);
+    this.textContent = "暂停";
+  }
+});
+document.getElementById("timerReset").addEventListener("click", () => {
+  if (timerId) { clearInterval(timerId); timerId = null; }
+  remainSec = TOTAL_SEC;
+  document.getElementById("timerToggle").textContent = "开始";
+  updateTimerUI();
+});
+
+// 支持按 URL hash 初始化指定景点（如 #gugong）
+const initHash = (location.hash || "").replace(/^#/, "");
+const foundIdx = SPOTS.findIndex(s => s.id === initHash);
+currentSpotIdx = foundIdx >= 0 ? foundIdx : 0;
+
+renderSpot();
+updateTimerUI();
+</script>
+</body>
+</html>
